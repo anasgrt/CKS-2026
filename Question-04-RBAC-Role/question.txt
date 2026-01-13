@@ -1,0 +1,35 @@
+Weight: 7%
+Domain: Cluster Hardening (15%)
+
+Context:
+A CI/CD pipeline needs limited access to deploy applications. Create RBAC rules
+following the principle of least privilege.
+
+Task:
+1. Create namespace 'cicd-ns' if it doesn't exist
+
+2. Create a ServiceAccount named 'deploy-sa' in namespace 'cicd-ns'
+
+3. Create a Role named 'deployment-manager' that allows:
+   - Full access to deployments (get, list, watch, create, update, patch, delete)
+   - Read access to pods and pods/log (get, list, watch)
+   - Read access to services (get, list)
+   - Read access to configmaps (get, list)
+   - NO access to secrets (critical security requirement)
+
+4. Create a RoleBinding named 'deploy-sa-binding' binding:
+   - Role 'deployment-manager' to ServiceAccount 'deploy-sa'
+
+5. Test the permissions work correctly:
+   kubectl auth can-i create deployments --as=system:serviceaccount:cicd-ns:deploy-sa -n cicd-ns
+   Should return "yes"
+
+   kubectl auth can-i get secrets --as=system:serviceaccount:cicd-ns:deploy-sa -n cicd-ns
+   Should return "no"
+
+Save all manifests to:
+- /opt/course/04/sa.yaml
+- /opt/course/04/role.yaml
+- /opt/course/04/rolebinding.yaml
+
+Save permission test output to: /opt/course/04/auth-test.txt

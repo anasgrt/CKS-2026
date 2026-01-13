@@ -1,0 +1,38 @@
+Weight: 6%
+Domain: Cluster Setup (15%)
+
+Context:
+A security audit is required. Use kube-bench to check CIS Kubernetes Benchmark compliance
+and remediate the findings.
+
+Task:
+1. SSH to the control plane node 'controlplane'
+
+2. Run kube-bench targeting the master components:
+   kube-bench run --targets master
+   Save this output to: /opt/course/03/kube-bench-before.txt
+
+3. Fix the following issues identified by kube-bench:
+
+   a) API Server fixes (/etc/kubernetes/manifests/kube-apiserver.yaml):
+      - Ensure --anonymous-auth=false
+      - Ensure --authorization-mode includes RBAC (not AlwaysAllow)
+      - Ensure --profiling=false
+      - Ensure --insecure-port=0 (if present, or flag not used)
+
+   b) After making changes, the kubelet will automatically restart the API server
+      Wait for the API server to be healthy again
+
+4. Run kube-bench targeting the node (kubelet) on worker-node-1:
+   ssh worker-node-1
+   kube-bench run --targets node
+
+   If kubelet issues are found:
+   - Find kubelet config file: systemctl status kubelet
+   - Edit /var/lib/kubelet/config.yaml if needed
+   - Restart kubelet manually: systemctl restart kubelet
+
+5. Save your remediation summary to: /opt/course/03/fixes.txt
+   Include which file was changed and what parameters were modified
+
+6. Run kube-bench again and save output to: /opt/course/03/kube-bench-after.txt

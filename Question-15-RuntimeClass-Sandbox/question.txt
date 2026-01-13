@@ -1,0 +1,45 @@
+Weight: 7%
+Domain: Minimize Microservice Vulnerabilities (20%)
+
+Context:
+Highly sensitive workloads require additional runtime isolation beyond standard
+container isolation. gVisor provides kernel-level sandboxing using a RuntimeClass.
+
+Task:
+1. Verify that the RuntimeClass 'gvisor' exists in the cluster:
+   kubectl get runtimeclass gvisor
+
+   If it doesn't exist, the cluster may need gVisor installed on worker nodes.
+   A RuntimeClass named 'gvisor' should be pre-configured with:
+   - handler: runsc
+
+2. Create namespace 'sandbox-ns' if it doesn't exist
+
+3. Create a pod named 'sandboxed-pod' in namespace 'sandbox-ns':
+   - Use image: nginx
+   - Specify runtimeClassName: gvisor
+
+   Example spec:
+   spec:
+     runtimeClassName: gvisor
+     containers:
+     - name: nginx
+       image: nginx
+
+4. Verify the pod is running with the sandboxed runtime:
+   kubectl get pod sandboxed-pod -n sandbox-ns -o jsonpath='{.spec.runtimeClassName}'
+   # Should return "gvisor"
+
+5. If gVisor is properly installed, verify sandboxing:
+   kubectl exec sandboxed-pod -n sandbox-ns -- dmesg | head
+   # Should show "Starting gVisor" or similar
+
+6. Compare with a regular pod (without RuntimeClass):
+   - Regular containers share the host kernel
+   - gVisor pods run inside a user-space kernel (sandboxed)
+
+Save your pod manifest to: /opt/course/15/pod.yaml
+
+Documentation allowed:
+- https://kubernetes.io/docs/concepts/containers/runtime-class/
+- https://gvisor.dev/docs/user_guide/quick_start/kubernetes/

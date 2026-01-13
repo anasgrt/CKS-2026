@@ -1,0 +1,41 @@
+Weight: 8%
+Domain: Monitoring, Logging and Runtime Security (20%)
+
+Context:
+The security team requires comprehensive audit logging to track access to sensitive
+resources. You need to configure the Kubernetes API server audit logging.
+
+Task:
+1. Create an audit policy file at /etc/kubernetes/audit-policy.yaml with these rules:
+
+   - omitStages: ["RequestReceived"] to reduce noise
+
+   - Log all requests to secrets at RequestResponse level
+
+   - Log requests to pods and pods/log at Metadata level
+
+   - Don't log requests to configmaps named "controller-leader" (level: None)
+
+   - Don't log watch requests by system:kube-proxy on endpoints/services
+
+   - Log configmap and secret changes in kube-system namespace at Request level
+
+   - Catch-all rule: Log everything else at Metadata level
+
+2. Configure the kube-apiserver with the following flags:
+   - --audit-policy-file=/etc/kubernetes/audit-policy.yaml
+   - --audit-log-path=/var/log/kubernetes/audit/audit.log
+   - --audit-log-maxage=8
+   - --audit-log-maxsize=9
+   - --audit-log-maxbackup=3
+
+3. Add the required volumeMounts and volumes to the kube-apiserver manifest:
+   - Mount audit policy file as File type (readOnly: true)
+   - Mount audit log directory as DirectoryOrCreate type
+
+4. Wait for the API server to restart and verify audit logs are being generated
+
+5. Create a secret in namespace 'audit-test' and find the corresponding audit log entry
+   Save that log entry to: /opt/course/14/secret-audit.log
+
+Save your audit policy to: /opt/course/14/audit-policy.yaml

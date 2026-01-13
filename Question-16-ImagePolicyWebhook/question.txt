@@ -1,0 +1,47 @@
+Weight: 6%
+Domain: Supply Chain Security (20%)
+
+Context:
+Images from untrusted registries must be blocked. Configure an admission controller
+to enforce image policy.
+
+Task:
+1. An image policy webhook service is deployed at:
+   https://image-policy-webhook.image-policy.svc:443
+
+   The CA certificate is at: /etc/kubernetes/pki/image-policy/ca.crt
+
+2. Create a kubeconfig file for the webhook at /etc/kubernetes/admission/image-policy-kubeconfig.yaml:
+   - cluster server: https://image-policy-webhook.image-policy.svc:443
+   - cluster certificate-authority: /etc/kubernetes/pki/image-policy/ca.crt
+   - user with client certificate/key (if required)
+
+3. Create an admission configuration at /etc/kubernetes/admission/admission-config.yaml:
+
+   apiVersion: apiserver.config.k8s.io/v1
+   kind: AdmissionConfiguration
+   plugins:
+     - name: ImagePolicyWebhook
+       configuration:
+         imagePolicy:
+           kubeConfigFile: /etc/kubernetes/admission/image-policy-kubeconfig.yaml
+           allowTTL: 50
+           denyTTL: 50
+           retryBackoff: 500
+           defaultAllow: false  # DENY if webhook unavailable
+
+4. Configure kube-apiserver:
+   - Enable ImagePolicyWebhook in --enable-admission-plugins
+   - Add --admission-control-config-file=/etc/kubernetes/admission/admission-config.yaml
+   - Mount admission directory as volume
+
+5. Test the webhook by deploying pods:
+   - Pod with image from docker.io (should be blocked if not trusted)
+   - Pod with image from your private registry (should be allowed)
+
+6. Check API server logs for admission decisions:
+   kubectl logs kube-apiserver-* -n kube-system | grep -i image
+
+Save your admission configuration to: /opt/course/16/admission-config.yaml
+Save the webhook kubeconfig to: /opt/course/16/image-policy-kubeconfig.yaml
+Save test results to: /opt/course/16/policy-test.txt

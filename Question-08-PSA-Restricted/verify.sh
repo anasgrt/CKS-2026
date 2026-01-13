@@ -1,0 +1,98 @@
+#!/bin/bash
+# Verify Question 08 - PSA Restricted
+
+GREEN='\033[0;32m'
+RED='\033[0;31m'
+NC='\033[0m'
+
+PASS=true
+
+echo "Checking Pod Security Admission configuration..."
+echo ""
+
+# Check namespace exists
+if kubectl get namespace psa-restricted &>/dev/null; then
+    echo -e "${GREEN}✓ Namespace 'psa-restricted' exists${NC}"
+
+    # Check enforce label
+    ENFORCE=$(kubectl get namespace psa-restricted -o jsonpath='{.metadata.labels.pod-security\.kubernetes\.io/enforce}')
+    if [ "$ENFORCE" == "restricted" ]; then
+        echo -e "${GREEN}✓ PSA enforce=restricted${NC}"
+    else
+        echo -e "${RED}✗ Namespace should have pod-security.kubernetes.io/enforce=restricted${NC}"
+        PASS=false
+    fi
+
+    # Check warn label
+    WARN=$(kubectl get namespace psa-restricted -o jsonpath='{.metadata.labels.pod-security\.kubernetes\.io/warn}')
+    if [ "$WARN" == "restricted" ]; then
+        echo -e "${GREEN}✓ PSA warn=restricted${NC}"
+    else
+        echo -e "${RED}✗ Namespace should have pod-security.kubernetes.io/warn=restricted${NC}"
+        PASS=false
+    fi
+
+    # Check audit label
+    AUDIT=$(kubectl get namespace psa-restricted -o jsonpath='{.metadata.labels.pod-security\.kubernetes\.io/audit}')
+    if [ "$AUDIT" == "restricted" ]; then
+        echo -e "${GREEN}✓ PSA audit=restricted${NC}"
+    else
+        echo -e "${RED}✗ Namespace should have pod-security.kubernetes.io/audit=restricted${NC}"
+        PASS=false
+    fi
+else
+    echo -e "${RED}✗ Namespace 'psa-restricted' not found${NC}"
+    PASS=false
+fi
+
+# Check secure pod
+echo ""
+echo "Checking secure pod..."
+if kubectl get pod secure-pod -n psa-restricted &>/dev/null; then
+    echo -e "${GREEN}✓ Pod 'secure-pod' exists${NC}"
+
+    # Check runAsNonRoot
+    RUN_AS_NON_ROOT=$(kubectl get pod secure-pod -n psa-restricted -o jsonpath='{.spec.containers[0].securityContext.runAsNonRoot}')
+    if [ "$RUN_AS_NON_ROOT" == "true" ]; then
+        echo -e "${GREEN}✓ runAsNonRoot: true${NC}"
+    else
+        echo -e "${RED}✗ Container should have runAsNonRoot: true${NC}"
+        PASS=false
+    fi
+
+    # Check capabilities dropped
+    DROP_CAPS=$(kubectl get pod secure-pod -n psa-restricted -o jsonpath='{.spec.containers[0].securityContext.capabilities.drop}')
+    if [[ "$DROP_CAPS" == *"ALL"* ]]; then
+        echo -e "${GREEN}✓ All capabilities dropped${NC}"
+    else
+        echo -e "${RED}✗ Should drop ALL capabilities${NC}"
+        PASS=false
+    fi
+
+    # Check readOnlyRootFilesystem
+    READ_ONLY=$(kubectl get pod secure-pod -n psa-restricted -o jsonpath='{.spec.containers[0].securityContext.readOnlyRootFilesystem}')
+    if [ "$READ_ONLY" == "true" ]; then
+        echo -e "${GREEN}✓ readOnlyRootFilesystem: true${NC}"
+    else
+        echo -e "${RED}✗ Should have readOnlyRootFilesystem: true${NC}"
+        PASS=false
+    fi
+
+    # Check allowPrivilegeEscalation
+    ALLOW_PRIV=$(kubectl get pod secure-pod -n psa-restricted -o jsonpath='{.spec.containers[0].securityContext.allowPrivilegeEscalation}')
+    if [ "$ALLOW_PRIV" == "false" ]; then
+        echo -e "${GREEN}✓ allowPrivilegeEscalation: false${NC}"
+    else
+        echo -e "${RED}✗ Should have allowPrivilegeEscalation: false${NC}"
+        PASS=false
+    fi
+else
+    echo -e "${RED}✗ Pod 'secure-pod' not found${NC}"
+    PASS=false
+fi
+
+if $PASS; then
+    exit 0
+else
+    exit 1
+fi

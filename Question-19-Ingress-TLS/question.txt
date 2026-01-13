@@ -1,0 +1,40 @@
+Weight: 5%
+Domain: Cluster Setup (15%)
+
+Context:
+All external traffic to the application must be encrypted using TLS.
+Configure an Ingress with proper TLS termination.
+
+Task:
+1. Namespace 'web-ns' contains:
+   - Deployment 'web-app' running nginx
+   - Service 'web-svc' exposing port 80
+
+2. Generate a self-signed TLS certificate (if not provided):
+   openssl req -x509 -nodes -days 365 -newkey rsa:2048 \
+     -keyout /opt/course/19/tls.key \
+     -out /opt/course/19/tls.crt \
+     -subj "/CN=secure.example.com"
+
+3. Create a TLS Secret named 'web-tls-secret' in namespace 'web-ns':
+   kubectl create secret tls web-tls-secret -n web-ns \
+     --cert=/opt/course/19/tls.crt \
+     --key=/opt/course/19/tls.key
+
+4. Create an Ingress resource named 'secure-ingress' in namespace 'web-ns':
+
+   Requirements:
+   - Host: secure.example.com
+   - TLS enabled using 'web-tls-secret'
+   - Route all traffic to service 'web-svc' on port 80
+   - Use appropriate ingressClassName (check what's available: kubectl get ingressclass)
+
+   Example annotations (if using nginx ingress controller):
+   - nginx.ingress.kubernetes.io/ssl-redirect: "true"
+
+5. Verify TLS is working:
+   curl -k https://secure.example.com (with appropriate /etc/hosts entry or DNS)
+
+Save your TLS secret command to: /opt/course/19/secret-create.txt
+Save your Ingress YAML to: /opt/course/19/ingress.yaml
+Save verification that TLS is configured to: /opt/course/19/tls-verify.txt

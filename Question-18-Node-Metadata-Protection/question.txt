@@ -1,0 +1,38 @@
+Weight: 5%
+Domain: Cluster Setup (15%)
+
+Context:
+On cloud providers (AWS, GCP, Azure), pods can access the instance metadata service
+at 169.254.169.254. This can leak sensitive credentials like IAM roles/service accounts.
+Block this access using NetworkPolicy.
+
+Task:
+1. Create namespace 'protected-ns' if it doesn't exist
+
+2. Create a NetworkPolicy named 'block-metadata' in namespace 'protected-ns':
+
+   The policy must:
+   - Apply to ALL pods in the namespace (podSelector: {})
+   - Block egress to 169.254.169.254/32 (metadata endpoint)
+   - Allow egress to all other destinations
+   - Allow DNS traffic to work (kube-dns)
+
+   This requires an egress rule that:
+   - Denies traffic to 169.254.169.254
+   - Allows all other egress (use ipBlock with 0.0.0.0/0 except 169.254.169.254/32)
+
+3. Create a test pod in 'protected-ns':
+   kubectl run test-pod --image=busybox -n protected-ns -- sleep 3600
+
+4. Verify metadata is blocked:
+   kubectl exec -n protected-ns test-pod -- wget -qO- --timeout=2 http://169.254.169.254/
+   This should fail/timeout
+
+5. Verify other traffic still works:
+   kubectl exec -n protected-ns test-pod -- wget -qO- --timeout=2 http://google.com
+   This should work (if internet accessible) or at least DNS should resolve
+
+Save your NetworkPolicy to: /opt/course/18/metadata-netpol.yaml
+Save test results (blocked and allowed traffic) to: /opt/course/18/test-result.txt
+
+Note: In a real cloud environment, you'd also use node-level iptables rules as defense in depth

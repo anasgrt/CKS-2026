@@ -1,0 +1,40 @@
+Weight: 5%
+Domain: Supply Chain Security (20%)
+
+Context:
+Static analysis tools help identify security issues before deployment.
+Use Kubesec to analyze and improve workload security.
+
+Task:
+1. An insecure deployment manifest exists at /opt/course/12/insecure-deploy.yaml
+   (will be created by setup script with known security issues)
+
+2. Run Kubesec scan on the deployment:
+   kubesec scan /opt/course/12/insecure-deploy.yaml
+
+   Or using the online API:
+   curl -sSX POST --data-binary @/opt/course/12/insecure-deploy.yaml \
+     https://v2.kubesec.io/scan
+
+   Save the scan results to: /opt/course/12/kubesec-report.json
+
+3. Analyze the report and identify:
+   - Current score
+   - Critical/passed items
+   - Recommended fixes
+
+4. Fix the security issues to achieve a score of at least 8 points:
+   Common fixes include:
+   - Add securityContext.runAsNonRoot: true
+   - Add securityContext.readOnlyRootFilesystem: true
+   - Add securityContext.allowPrivilegeEscalation: false
+   - Drop ALL capabilities
+   - Add resource limits
+   - Remove hostPID, hostIPC, hostNetwork if present
+
+5. Save the fixed deployment to: /opt/course/12/secure-deploy.yaml
+
+6. Scan the fixed deployment and save results to: /opt/course/12/kubesec-fixed.json
+   Verify the score is >= 8
+
+7. Apply the fixed deployment to namespace 'kubesec-ns'

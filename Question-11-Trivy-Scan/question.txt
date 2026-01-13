@@ -1,0 +1,37 @@
+Weight: 7%
+Domain: Supply Chain Security (20%)
+
+Context:
+A deployment uses multiple container images. You need to scan these images for
+vulnerabilities and recommend which images are safe to use in production.
+
+Task:
+1. The following images are used in the cluster:
+   - nginx:1.19
+   - nginx:1.25-alpine
+   - python:3.8
+   - python:3.12-alpine
+
+2. Use Trivy to scan each image for vulnerabilities:
+   trivy image --severity HIGH,CRITICAL <image-name>
+
+3. Save scan results:
+   - /opt/course/11/nginx-1.19-scan.txt
+   - /opt/course/11/nginx-1.25-alpine-scan.txt
+   - /opt/course/11/python-3.8-scan.txt
+   - /opt/course/11/python-3.12-alpine-scan.txt
+
+4. Analyze the results and determine:
+   - Which nginx image has fewer critical vulnerabilities?
+   - Which python image has fewer critical vulnerabilities?
+
+5. Create a file /opt/course/11/recommendations.txt containing:
+   - Recommended nginx image and why
+   - Recommended python image and why
+   - Total count of HIGH and CRITICAL vulnerabilities for each image
+
+6. Update the deployment 'web-app' in namespace 'trivy-test' to use the safer images
+
+Hint: Alpine-based images typically have smaller attack surface
+
+Save your updated deployment to: /opt/course/11/updated-deployment.yaml

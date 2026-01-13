@@ -1,0 +1,39 @@
+Weight: 7%
+Domain: Cluster Setup (15%)
+
+Context:
+A microservices application has frontend, api, and database tiers. You need to
+restrict network traffic to follow the principle of least privilege.
+
+Task:
+1. Namespace 'microservices-ns' contains pods with labels:
+   - tier=frontend (web servers)
+   - tier=api (API servers)
+   - tier=database (PostgreSQL)
+
+2. Create NetworkPolicy 'api-policy' that allows API pods to:
+   Ingress:
+   - Only accept traffic from frontend pods on port 8080
+   - Only accept traffic from pods in namespace 'monitoring-ns' (for health checks)
+
+   Egress:
+   - Only connect to database pods on port 5432
+   - Allow DNS traffic (port 53 UDP/TCP to kube-system namespace)
+
+3. Create NetworkPolicy 'database-policy' that allows database pods to:
+   Ingress:
+   - Only accept traffic from API pods on port 5432
+   - No other ingress allowed
+
+   Egress:
+   - Only allow DNS (for name resolution)
+   - No other egress
+
+4. Test that frontend cannot directly access database (should be blocked)
+5. Test that API can access database (should work)
+
+Save your NetworkPolicies to:
+- /opt/course/02/api-netpol.yaml
+- /opt/course/02/db-netpol.yaml
+
+Save test results to: /opt/course/02/connectivity-test.txt

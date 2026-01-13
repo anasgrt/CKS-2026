@@ -1,0 +1,35 @@
+Weight: 7%
+Domain: Cluster Hardening (15%)
+
+Context:
+A deployment is using the default ServiceAccount which has excessive permissions.
+You need to create a restricted ServiceAccount and update the deployment.
+
+Task:
+1. In namespace 'secure-ns', a deployment 'insecure-app' exists using default SA
+
+2. Create a new ServiceAccount named 'restricted-sa' with:
+   - automountServiceAccountToken: false
+
+3. Create a Role named 'pod-reader' that only allows:
+   - get, list on pods
+   - get, list on services
+   (No create, update, delete, or access to secrets)
+
+4. Create a RoleBinding named 'restricted-sa-binding' that binds:
+   - Role 'pod-reader' to ServiceAccount 'restricted-sa'
+
+5. Update deployment 'insecure-app' to:
+   - Use ServiceAccount 'restricted-sa'
+   - Set automountServiceAccountToken: false at pod spec level
+   - Ensure the token is not mounted even if SA has it enabled
+
+6. Verify the pod cannot access secrets:
+   kubectl exec <pod-name> -n secure-ns -- cat /var/run/secrets/kubernetes.io/serviceaccount/token
+   This should fail or the directory should not exist
+
+Save your manifests to:
+- /opt/course/05/sa.yaml (ServiceAccount)
+- /opt/course/05/role.yaml (Role)
+- /opt/course/05/rolebinding.yaml (RoleBinding)
+- /opt/course/05/deployment.yaml (updated deployment)

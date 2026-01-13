@@ -1,0 +1,40 @@
+Weight: 8%
+Domain: Minimize Microservice Vulnerabilities (20%)
+
+Context:
+Your team is migrating workloads to use Pod Security Admission (PSA). You need to
+configure namespace-level security and create compliant pods.
+
+Task:
+1. Create namespace 'psa-restricted' with the following Pod Security labels:
+   - pod-security.kubernetes.io/enforce: restricted
+   - pod-security.kubernetes.io/enforce-version: latest
+   - pod-security.kubernetes.io/warn: restricted
+   - pod-security.kubernetes.io/audit: restricted
+
+2. Create a pod named 'secure-pod' in namespace 'psa-restricted' that complies with
+   the restricted security standard. The pod MUST include:
+
+   At pod level (spec.securityContext):
+   - runAsNonRoot: true
+   - seccompProfile.type: RuntimeDefault
+
+   At container level (spec.containers[].securityContext):
+   - runAsNonRoot: true
+   - runAsUser: 1000
+   - allowPrivilegeEscalation: false
+   - readOnlyRootFilesystem: true
+   - capabilities.drop: ["ALL"]
+
+3. Use image: nginx:alpine
+
+4. The pod should NOT have any of:
+   - privileged: true
+   - hostNetwork, hostPID, hostIPC
+   - hostPath volumes
+
+5. Test that a non-compliant pod (running as root) gets rejected:
+   Try to create a pod without the security settings and observe the error
+
+Save your compliant pod YAML to: /opt/course/08/pod.yaml
+Save the error message from rejected pod to: /opt/course/08/rejected-error.txt

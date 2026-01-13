@@ -1,0 +1,41 @@
+Weight: 4%
+Domain: Cluster Setup (15%)
+
+Context:
+Binary verification is critical to ensure Kubernetes components haven't been tampered with.
+Verify the integrity of cluster binaries.
+
+Task:
+1. Identify the Kubernetes version running on the cluster:
+   kubectl version --short
+   Note the server version (e.g., v1.30.0)
+
+2. Download the official SHA512 checksum for kubectl:
+   curl -LO "https://dl.k8s.io/release/v1.30.0/bin/linux/amd64/kubectl.sha512"
+   (replace v1.30.0 with your cluster version)
+
+3. Verify the kubectl binary on the control plane node:
+   - Find kubectl location: which kubectl
+   - Calculate its SHA512: sha512sum $(which kubectl)
+   - Compare with official checksum
+
+   Save verification result to: /opt/course/17/kubectl-verify.txt
+
+4. A suspicious kubelet binary has been found at /tmp/kubelet-suspicious
+
+   a) Download official kubelet checksum:
+      curl -LO "https://dl.k8s.io/release/v1.30.0/bin/linux/amd64/kubelet.sha512"
+
+   b) Calculate checksum of suspicious binary:
+      sha512sum /tmp/kubelet-suspicious
+
+   c) Compare with official checksum
+
+5. Document your findings:
+   - Is kubectl genuine? (matches official checksum)
+   - Is /tmp/kubelet-suspicious genuine or tampered?
+
+Save checksum comparison to: /opt/course/17/kubelet-verify.txt
+Save conclusion (GENUINE or TAMPERED) to: /opt/course/17/conclusion.txt
+
+Hint: Use 'echo "<checksum> <filename>" | sha512sum --check' for verification

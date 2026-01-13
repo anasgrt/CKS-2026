@@ -1,0 +1,39 @@
+Weight: 6%
+Domain: Cluster Hardening (15%)
+
+Context:
+A cluster monitoring tool needs read-only access across all namespaces while
+preventing any write operations. Security team requires verification of permissions.
+
+Task:
+1. Create namespace 'monitoring' if it doesn't exist
+
+2. Create a ClusterRole named 'cluster-monitor' that allows:
+   - GET, LIST, WATCH on pods in all namespaces
+   - GET, LIST, WATCH on nodes
+   - GET, LIST, WATCH on namespaces
+   - GET on pods/log (read container logs)
+   - GET, LIST on events (for alerting)
+   - GET on endpoints and services (for service discovery)
+
+   The role MUST NOT allow:
+   - Any write operations (create, update, delete, patch)
+   - Access to secrets or configmaps
+   - Exec into pods
+
+3. Create a ServiceAccount named 'monitor-sa' in namespace 'monitoring'
+
+4. Create a ClusterRoleBinding named 'cluster-monitor-binding' that binds:
+   - ClusterRole 'cluster-monitor' to ServiceAccount 'monitor-sa'
+
+5. Verify permissions:
+   kubectl auth can-i list pods --all-namespaces --as=system:serviceaccount:monitoring:monitor-sa
+   kubectl auth can-i delete pods --as=system:serviceaccount:monitoring:monitor-sa
+   kubectl auth can-i get secrets --as=system:serviceaccount:monitoring:monitor-sa
+
+Save all manifests to:
+- /opt/course/20/clusterrole.yaml
+- /opt/course/20/sa.yaml
+- /opt/course/20/clusterrolebinding.yaml
+
+Save auth can-i test results to: /opt/course/20/permissions-test.txt
