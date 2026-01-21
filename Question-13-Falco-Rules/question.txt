@@ -23,7 +23,7 @@ Task:
 4. In another terminal, trigger the rule by running:
    kubectl exec -it <any-running-pod> -- /bin/sh
 
-5. Check Falco logs using: journalctl -u falco | grep "Shell Spawned"
+5. Check Falco logs using: journalctl -u falco | grep "Shell spawned"
 
 6. Using crictl on the worker node, identify the container ID where the shell was spawned
    Save the container ID to: /opt/course/13/container-id.txt

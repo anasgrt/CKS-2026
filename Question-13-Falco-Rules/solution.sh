@@ -54,10 +54,10 @@ cat << 'EOF'
 kubectl exec -it <any-running-pod> -- /bin/sh
 
 # Watch Falco logs for the alert
-journalctl -u falco-modern-bpf -f | grep "Shell Spawned"
+journalctl -u falco-modern-bpf -f | grep "Shell spawned"
 
 # Save the alert output
-journalctl -u falco-modern-bpf | grep "Shell Spawned" > /opt/course/13/falco-alert.txt
+journalctl -u falco-modern-bpf | grep "Shell spawned" > /opt/course/13/falco-alert.txt
 EOF
 
 echo ""
