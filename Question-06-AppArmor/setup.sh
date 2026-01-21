@@ -88,7 +88,7 @@ if [ "$NEEDS_REBOOT" = "NEEDS_REBOOT" ]; then
 
     # Wait for Kubernetes node to be Ready
     echo "Waiting for node-01 to be Ready in Kubernetes..."
-    local k8s_attempts=0
+    k8s_attempts=0
     while [ $k8s_attempts -lt 30 ]; do
         if kubectl get node node-01 2>/dev/null | grep -q " Ready"; then
             echo "✓ node-01 is Ready in Kubernetes"
