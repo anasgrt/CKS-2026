@@ -47,6 +47,10 @@ h1, h2, h3 {
 }
 </style>
 
+# Certified Kubernetes Security Specialist (CKS) 2026 Study Guide
+
+**Exam-Aligned | Kubernetes v1.34+ | Based on Muschko + 2026 Curriculum Updates**
+
 This comprehensive study guide is aligned with the **official CKS 2026 curriculum** (Kubernetes v1.34+). It combines content from Benjamin Muschko's *Certified Kubernetes Security Specialist (CKS) Study Guide* (O'Reilly, 2023) with critical **2024-2026 curriculum additions** including SBOM, KubeLinter, and Cilium/Istio pod-to-pod encryption.
 
 The CKS is a performance-based exam lasting **2 hours** with 15-20 hands-on tasks. The passing score requires approximately 67%. This guide provides exam-aligned competencies, fast-path commands, common traps, and verification steps for each topic.
