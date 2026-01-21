@@ -12,9 +12,9 @@ ssh node-01
 
 # Create the custom Falco rule with macros as specified
 cat > /etc/falco/rules.d/shell-detect.yaml << 'YAML'
-# Macro: spawned_process
+# Macro: spawned_process (evt.dir is deprecated - don't use it)
 - macro: spawned_process
-  condition: evt.type = execve and evt.dir = <
+  condition: evt.type in (execve, execveat)
 
 # Macro: container
 - macro: container
@@ -78,7 +78,8 @@ EOF
 echo ""
 echo "Key Points:"
 echo "- Falco macros allow reusable conditions"
-echo "- spawned_process uses evt.type=execve and evt.dir=< (entering syscall)"
+echo "- spawned_process uses evt.type in (execve, execveat)"
+echo "- Note: evt.dir is DEPRECATED in modern Falco - do not use it"
 echo "- container macro filters to only container events"
 echo "- Output fields use Falco field syntax like %user.name, %k8s.pod.name"
 echo "- Priority levels: DEBUG, INFO, NOTICE, WARNING, ERROR, CRITICAL, ALERT, EMERGENCY"

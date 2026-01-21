@@ -10,7 +10,7 @@ Task:
 1. Falco is installed on node 'node-01'. SSH to this node.
 
 2. Create a custom Falco rule file at /etc/falco/rules.d/shell-detect.yaml that:
-   - Uses a macro named 'spawned_process' with condition: evt.type = execve and evt.dir = <
+   - Uses a macro named 'spawned_process' with condition: evt.type in (execve, execveat)
    - Uses a macro named 'container' with condition: container.id != host
    - Creates a rule named 'Shell Spawned in Container'
    - Condition: spawned_process and container and proc.name in (bash, sh, ash, dash, zsh)
