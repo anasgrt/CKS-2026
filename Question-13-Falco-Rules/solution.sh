@@ -38,14 +38,11 @@ echo "Step 2: Restart Falco service"
 echo ""
 
 cat << 'EOF'
-# Restart Falco to load new rule
+# Restart Falco to load new rule (Falco runs as systemd service on node-01)
 sudo systemctl restart falco-modern-bpf
 
 # Verify Falco is running
 sudo systemctl status falco-modern-bpf
-
-# OR if Falco is running as DaemonSet
-kubectl delete pod -n falco -l app=falco
 EOF
 
 echo ""
@@ -85,5 +82,5 @@ echo "- spawned_process uses evt.type=execve and evt.dir=< (entering syscall)"
 echo "- container macro filters to only container events"
 echo "- Output fields use Falco field syntax like %user.name, %k8s.pod.name"
 echo "- Priority levels: DEBUG, INFO, NOTICE, WARNING, ERROR, CRITICAL, ALERT, EMERGENCY"
-echo "- Use journalctl -u falco-modern-bpf for systemd-managed Falco"
-echo "- Use kubectl logs for Falco running as DaemonSet"
+echo "- Falco runs as systemd service (falco-modern-bpf) on node-01"
+echo "- Use journalctl -u falco-modern-bpf to view logs"
