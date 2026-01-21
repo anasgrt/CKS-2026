@@ -8,7 +8,7 @@ echo ""
 
 cat << 'EOF'
 # SSH to worker node and check profile
-ssh worker-node-1
+ssh node-01
 aa-status | grep k8s-deny-write
 
 # If not loaded, load it:

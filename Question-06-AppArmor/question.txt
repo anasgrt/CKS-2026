@@ -6,7 +6,7 @@ An AppArmor profile has been created to restrict container file system writes.
 Configure pods to use this security profile.
 
 Task:
-1. SSH to worker-node-1 and verify the AppArmor profile 'k8s-deny-write' is loaded:
+1. SSH to node-01 and verify the AppArmor profile 'k8s-deny-write' is loaded:
    aa-status | grep k8s-deny-write
 
    If not loaded, load it from /etc/apparmor.d/k8s-deny-write

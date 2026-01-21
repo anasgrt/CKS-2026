@@ -93,21 +93,22 @@ list_questions() {
 }
 
 run_setup() {
-    local num=$1
-    local dir=$(get_question_dir $num)
+    local question_id=$1
+    local dir=$(get_question_dir $question_id)
+    local question_name=$(basename "$dir")
 
     if [ -z "$dir" ] || [ ! -d "$dir" ]; then
-        echo -e "${RED}Error: Question $num not found${NC}"
+        echo -e "${RED}Error: Question '$question_id' not found${NC}"
         exit 1
     fi
 
     if [ ! -f "$dir/setup.sh" ]; then
-        echo -e "${RED}Error: setup.sh not found for question $num${NC}"
+        echo -e "${RED}Error: setup.sh not found for question '$question_id'${NC}"
         exit 1
     fi
 
     print_header
-    echo -e "${YELLOW}Setting up Question $num...${NC}"
+    echo -e "${YELLOW}Setting up $question_name...${NC}"
     echo ""
 
     bash "$dir/setup.sh"
@@ -120,79 +121,82 @@ run_setup() {
     cat "$dir/question.txt"
     echo "─────────────────────────────────────────────────────────────────────"
     echo ""
-    echo -e "Run ${YELLOW}./scripts/run-question.sh verify $num${NC} when you're done."
+    echo -e "Run ${YELLOW}./scripts/run-question.sh $question_id verify${NC} when you're done."
 }
 
 run_verify() {
-    local num=$1
-    local dir=$(get_question_dir $num)
+    local question_id=$1
+    local dir=$(get_question_dir $question_id)
+    local question_name=$(basename "$dir")
 
     if [ -z "$dir" ] || [ ! -d "$dir" ]; then
-        echo -e "${RED}Error: Question $num not found${NC}"
+        echo -e "${RED}Error: Question '$question_id' not found${NC}"
         exit 1
     fi
 
     if [ ! -f "$dir/verify.sh" ]; then
-        echo -e "${RED}Error: verify.sh not found for question $num${NC}"
+        echo -e "${RED}Error: verify.sh not found for question '$question_id'${NC}"
         exit 1
     fi
 
     print_header
-    echo -e "${YELLOW}Verifying Question $num...${NC}"
+    echo -e "${YELLOW}Verifying $question_name...${NC}"
     echo ""
 
     if bash "$dir/verify.sh"; then
         echo ""
         echo -e "${GREEN}══════════════════════════════════════════════════════════════════${NC}"
-        echo -e "${GREEN}                    ✓ QUESTION $num: PASSED!                      ${NC}"
+        echo -e "${GREEN}                    ✓ $question_name: PASSED!                      ${NC}"
         echo -e "${GREEN}══════════════════════════════════════════════════════════════════${NC}"
     else
         echo ""
         echo -e "${RED}══════════════════════════════════════════════════════════════════${NC}"
-        echo -e "${RED}                    ✗ QUESTION $num: FAILED                       ${NC}"
+        echo -e "${RED}                    ✗ $question_name: FAILED                       ${NC}"
         echo -e "${RED}══════════════════════════════════════════════════════════════════${NC}"
         echo ""
-        echo -e "Run ${YELLOW}./scripts/run-question.sh solution $num${NC} to see the solution."
+        echo -e "Run ${YELLOW}./scripts/run-question.sh $question_id solution${NC} to see the solution."
     fi
 }
 
 run_solution() {
-    local num=$1
-    local dir=$(get_question_dir $num)
+    local question_id=$1
+    local dir=$(get_question_dir $question_id)
+    local question_name=$(basename "$dir")
 
     if [ -z "$dir" ] || [ ! -d "$dir" ]; then
-        echo -e "${RED}Error: Question $num not found${NC}"
+        echo -e "${RED}Error: Question '$question_id' not found${NC}"
         exit 1
     fi
 
     if [ ! -f "$dir/solution.sh" ]; then
-        echo -e "${RED}Error: solution.sh not found for question $num${NC}"
+        echo -e "${RED}Error: solution.sh not found for question '$question_id'${NC}"
         exit 1
     fi
 
     print_header
-    echo -e "${YELLOW}Solution for Question $num:${NC}"
+    echo -e "${YELLOW}Solution for $question_name:${NC}"
     echo ""
 
     bash "$dir/solution.sh"
 }
 
 run_reset() {
-    local num=$1
-    local dir=$(get_question_dir $num)
+    local question_id=$1
+    local dir=$(get_question_dir $question_id)
+    local question_name=$(basename "$dir")
 
     if [ -z "$dir" ] || [ ! -d "$dir" ]; then
-        echo -e "${RED}Error: Question $num not found${NC}"
+        echo -e "${RED}Error: Question '$question_id' not found${NC}"
         exit 1
     fi
 
     if [ ! -f "$dir/reset.sh" ]; then
-        echo -e "${RED}Error: reset.sh not found for question $num${NC}"
+        echo -e "${RED}Error: reset.sh not found for question '$question_id'${NC}"
         exit 1
     fi
 
     print_header
-    echo -e "${YELLOW}Resetting Question $num...${NC}"
+    echo -e "${YELLOW}Resetting $question_name...${NC}"
     echo ""
 
     bash "$dir/reset.sh"
@@ -202,21 +206,22 @@ run_reset() {
 }
 
 show_question() {
-    local num=$1
-    local dir=$(get_question_dir $num)
+    local question_id=$1
+    local dir=$(get_question_dir $question_id)
+    local question_name=$(basename "$dir")
 
     if [ -z "$dir" ] || [ ! -d "$dir" ]; then
-        echo -e "${RED}Error: Question $num not found${NC}"
+        echo -e "${RED}Error: Question '$question_id' not found${NC}"
         exit 1
     fi
 
     if [ ! -f "$dir/question.txt" ]; then
-        echo -e "${RED}Error: question.txt not found for question $num${NC}"
+        echo -e "${RED}Error: question.txt not found for question '$question_id'${NC}"
         exit 1
     fi
 
     print_header
-    echo -e "${CYAN}Question $num:${NC}"
+    echo -e "${CYAN}$question_name:${NC}"
     echo "─────────────────────────────────────────────────────────────────────"
     cat "$dir/question.txt"
     echo "─────────────────────────────────────────────────────────────────────"

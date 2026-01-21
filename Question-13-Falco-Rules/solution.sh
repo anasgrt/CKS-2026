@@ -3,12 +3,12 @@
 
 echo "Solution: Create custom Falco rule"
 echo ""
-echo "Step 1: SSH to worker-node-1 and create the custom rule file"
+echo "Step 1: SSH to node-01 and create the custom rule file"
 echo ""
 
 cat << 'EOF'
 # SSH to the worker node
-ssh worker-node-1
+ssh node-01
 
 # Create the custom Falco rule with macros as specified
 cat > /etc/falco/rules.d/shell-detect.yaml << 'YAML'
