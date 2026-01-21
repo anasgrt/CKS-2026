@@ -25,26 +25,46 @@ print_header() {
 }
 
 print_usage() {
-    echo "Usage: $0 <command> [question-number]"
+    echo "Usage: $0 <question> [command]"
     echo ""
     echo "Commands:"
     echo "  list              - List all available questions"
-    echo "  setup <N>         - Setup environment for question N"
-    echo "  verify <N>        - Verify your solution for question N"
-    echo "  solution <N>      - Show solution for question N"
-    echo "  reset <N>         - Reset environment for question N"
-    echo "  question <N>      - Display question N"
     echo "  exam              - Start a full exam simulation (2 hours)"
     echo ""
-    echo "Example:"
-    echo "  $0 setup 1        - Setup question 1"
-    echo "  $0 verify 1       - Check if question 1 is solved correctly"
+    echo "Question Commands (default: setup):"
+    echo "  setup             - Setup environment for question"
+    echo "  verify            - Verify your solution for question"
+    echo "  solution          - Show solution for question"
+    echo "  reset             - Reset environment for question"
+    echo "  question          - Display question text only"
+    echo ""
+    echo "Examples:"
+    echo "  $0 Question-06-AppArmor          - Setup question 6 (default)"
+    echo "  $0 Question-06-AppArmor verify   - Verify question 6 solution"
+    echo "  $0 6 solution                    - Show solution for question 6"
+    echo "  $0 list                          - List all questions"
 }
 
 get_question_dir() {
-    local num=$1
-    local padded_num=$(printf '%02d' $num)
-    local dir=$(find $BASE_DIR -maxdepth 1 -type d -name "Question-${padded_num}-*" 2>/dev/null | head -1)
+    local input=$1
+
+    # If input looks like a directory name (Question-XX-Name), extract the number
+    if [[ $input =~ ^Question-([0-9]+) ]]; then
+        local num="${BASH_REMATCH[1]}"
+    else
+        local num=$input
+    fi
+
+    # Pad the number to 2 digits
+    local padded_num=$(printf '%02d' $num 2>/dev/null)
+
+    # If printf failed (input wasn't a number), try to find by exact directory name
+    if [ $? -ne 0 ]; then
+        local dir=$(find $BASE_DIR -maxdepth 1 -type d -name "$input" 2>/dev/null | head -1)
+    else
+        local dir=$(find $BASE_DIR -maxdepth 1 -type d -name "Question-${padded_num}-*" 2>/dev/null | head -1)
+    fi
+
     echo "$dir"
 }
 
@@ -241,51 +261,39 @@ case "${1:-}" in
     list)
         list_questions
         ;;
-    setup)
-        if [ -z "${2:-}" ]; then
-            echo -e "${RED}Error: Please specify a question number${NC}"
-            print_usage
-            exit 1
-        fi
-        run_setup $2
-        ;;
-    verify)
-        if [ -z "${2:-}" ]; then
-            echo -e "${RED}Error: Please specify a question number${NC}"
-            print_usage
-            exit 1
-        fi
-        run_verify $2
-        ;;
-    solution)
-        if [ -z "${2:-}" ]; then
-            echo -e "${RED}Error: Please specify a question number${NC}"
-            print_usage
-            exit 1
-        fi
-        run_solution $2
-        ;;
-    reset)
-        if [ -z "${2:-}" ]; then
-            echo -e "${RED}Error: Please specify a question number${NC}"
-            print_usage
-            exit 1
-        fi
-        run_reset $2
-        ;;
-    question)
-        if [ -z "${2:-}" ]; then
-            echo -e "${RED}Error: Please specify a question number${NC}"
-            print_usage
-            exit 1
-        fi
-        show_question $2
-        ;;
     exam)
         run_exam
         ;;
-    *)
+    "")
         print_header
         print_usage
+        ;;
+    *)
+        # First argument is the question identifier
+        QUESTION_ID="$1"
+        COMMAND="${2:-setup}"  # Default to setup if no command specified
+
+        case "$COMMAND" in
+            setup)
+                run_setup "$QUESTION_ID"
+                ;;
+            verify)
+                run_verify "$QUESTION_ID"
+                ;;
+            solution)
+                run_solution "$QUESTION_ID"
+                ;;
+            reset)
+                run_reset "$QUESTION_ID"
+                ;;
+            question)
+                show_question "$QUESTION_ID"
+                ;;
+            *)
+                echo -e "${RED}Error: Unknown command '$COMMAND'${NC}"
+                echo -e "Valid commands: setup, verify, solution, reset, question"
+                exit 1
+                ;;
+        esac
         ;;
 esac
