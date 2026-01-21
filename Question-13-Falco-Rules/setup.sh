@@ -19,7 +19,7 @@ if ! command -v falco &> /dev/null; then
 
     # Add Falco repository
     curl -fsSL https://falco.org/repo/falcosecurity-packages.asc | \
-      sudo gpg --dearmor -o /usr/share/keyrings/falco-archive-keyring.gpg
+      sudo gpg --batch --yes --dearmor -o /usr/share/keyrings/falco-archive-keyring.gpg
 
     sudo cat > /etc/apt/sources.list.d/falcosecurity.list << 'EOF'
 deb [signed-by=/usr/share/keyrings/falco-archive-keyring.gpg] https://download.falco.org/packages/deb stable main
