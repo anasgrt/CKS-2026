@@ -16,6 +16,23 @@ if ! command -v aa-status &> /dev/null; then
     sudo apt-get install -y -qq apparmor apparmor-utils
 fi
 
+# Check if AppArmor is enabled in kernel
+if [ ! -d "/sys/kernel/security/apparmor" ]; then
+    echo "⚠ AppArmor not enabled in kernel - checking boot parameters..."
+    if ! grep -q "apparmor=1 security=apparmor" /proc/cmdline; then
+        echo "AppArmor kernel parameters missing. Adding to GRUB configuration..."
+        sudo sed -i 's/GRUB_CMDLINE_LINUX="[^"]*/& apparmor=1 security=apparmor/' /etc/default/grub 2>/dev/null || true
+        echo "⚠ Node requires reboot for AppArmor to take effect"
+        echo "Run: ssh node-01 'sudo reboot'"
+        exit 1
+    fi
+fi
+
+# Mount AppArmor securityfs if not mounted
+if [ ! -d "/sys/kernel/security/apparmor" ]; then
+    sudo mount -t securityfs securityfs /sys/kernel/security || true
+fi
+
 # Ensure AppArmor is running
 sudo systemctl enable apparmor 2>/dev/null || true
 sudo systemctl start apparmor 2>/dev/null || true
