@@ -44,16 +44,11 @@ EOF
         fi
     fi
 
-    # Enable and start Falco service
-    sudo systemctl enable falco
-    sudo systemctl start falco || true
-
-    # If service failed, try with modern_ebpf explicitly
-    if ! sudo systemctl is-active --quiet falco; then
-        echo "Trying to start Falco with modern_ebpf driver..."
-        sudo falco --modern-bpf -d 2>/dev/null &
-        sleep 2
-    fi
+    # Enable and start Falco service (modern_ebpf is the default now)
+    # The package creates falco-modern-bpf.service and links falco.service to it
+    sudo systemctl daemon-reload
+    sudo systemctl enable falco-modern-bpf.service 2>/dev/null || true
+    sudo systemctl start falco-modern-bpf.service || true
 
     # Wait for service to start
     sleep 3
@@ -62,15 +57,15 @@ EOF
 else
     echo "Falco already installed"
     # Ensure it's running
-    sudo systemctl start falco 2>/dev/null || true
+    sudo systemctl start falco-modern-bpf.service 2>/dev/null || sudo systemctl start falco 2>/dev/null || true
 fi
 
-# Verify Falco is running
-if sudo systemctl is-active --quiet falco; then
+# Verify Falco is running (check both possible service names)
+if sudo systemctl is-active --quiet falco-modern-bpf.service || sudo systemctl is-active --quiet falco; then
     echo "✓ Falco service is running"
 else
     echo "✗ Falco service failed to start"
-    sudo journalctl -u falco -n 20 --no-pager
+    sudo journalctl -u falco-modern-bpf -n 20 --no-pager 2>/dev/null || sudo journalctl -u falco -n 20 --no-pager
     exit 1
 fi
 ENDSSH
