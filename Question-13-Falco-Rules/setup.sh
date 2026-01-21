@@ -25,16 +25,35 @@ if ! command -v falco &> /dev/null; then
 deb [signed-by=/usr/share/keyrings/falco-archive-keyring.gpg] https://download.falco.org/packages/deb stable main
 EOF
 
-    # Install Falco
+    # Install Falco (without kernel headers - we'll use modern_ebpf driver)
     sudo apt-get update -qq
-    sudo DEBIAN_FRONTEND=noninteractive apt-get install -y -qq linux-headers-$(uname -r) falco
+    sudo DEBIAN_FRONTEND=noninteractive apt-get install -y -qq falco
 
     # Create rules directory if it doesn't exist
     sudo mkdir -p /etc/falco/rules.d
 
+    # Configure Falco to use modern_ebpf driver (doesn't need kernel headers)
+    # This uses BPF CO-RE which works without headers on kernels 5.8+
+    sudo mkdir -p /etc/falco
+    if [ -f /etc/falco/falco.yaml ]; then
+        sudo sed -i 's/^driver:$/driver:\n  kind: modern_ebpf/' /etc/falco/falco.yaml 2>/dev/null || true
+        # If the above didn't work, try setting it directly
+        if ! grep -q "kind: modern_ebpf" /etc/falco/falco.yaml; then
+            sudo sed -i 's/kind: kmod/kind: modern_ebpf/' /etc/falco/falco.yaml 2>/dev/null || true
+            sudo sed -i 's/kind: ebpf/kind: modern_ebpf/' /etc/falco/falco.yaml 2>/dev/null || true
+        fi
+    fi
+
     # Enable and start Falco service
     sudo systemctl enable falco
-    sudo systemctl start falco
+    sudo systemctl start falco || true
+
+    # If service failed, try with modern_ebpf explicitly
+    if ! sudo systemctl is-active --quiet falco; then
+        echo "Trying to start Falco with modern_ebpf driver..."
+        sudo falco --modern-bpf -d 2>/dev/null &
+        sleep 2
+    fi
 
     # Wait for service to start
     sleep 3
