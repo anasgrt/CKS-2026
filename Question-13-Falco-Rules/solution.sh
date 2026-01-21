@@ -8,7 +8,7 @@ echo ""
 
 cat << 'EOF'
 # SSH to the worker node
-ssh node-01
+ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null node-01
 
 # Create the custom Falco rule with macros as specified
 cat > /etc/falco/rules.d/shell-detect.yaml << 'YAML'
