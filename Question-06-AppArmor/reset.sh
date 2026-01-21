@@ -1,7 +1,12 @@
 #!/bin/bash
 # Reset Question 06 - AppArmor
 
-kubectl delete pod secured-pod -n apparmor-ns --ignore-not-found
+# Delete the secured-pod created by user
+kubectl delete pod secured-pod -n apparmor-ns --ignore-not-found 2>/dev/null
+
+# Clean up output directory
 rm -rf /opt/course/06
+
+# Note: AppArmor profile 'k8s-deny-write' is kept on node-01 as it's part of the setup infrastructure
 
 echo "Question 06 reset complete!"

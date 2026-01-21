@@ -1,7 +1,11 @@
 #!/bin/bash
 # Reset Question 03 - CIS Benchmark
 
+# Clean up output directory
 rm -rf /opt/course/03
 
 echo "Question 03 reset complete!"
-echo "Note: API server manifest changes must be manually reverted if needed."
+echo ""
+echo "Note: kube-bench tool is kept installed on nodes as infrastructure."
+echo "If you modified /etc/kubernetes/manifests/kube-apiserver.yaml on cplane-01,"
+echo "you must manually revert those changes."

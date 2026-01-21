@@ -9,13 +9,20 @@ echo "Installing kube-bench on nodes..."
 ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null cplane-01 'bash -s' << 'ENDSSH'
 set -e
 
-if ! command -v kube-bench &> /dev/null; then
+if ! command -v kube-bench &> /dev/null || [ ! -d /etc/kube-bench/cfg ]; then
     echo "Installing kube-bench on cplane-01..."
-    curl -L https://github.com/aquasecurity/kube-bench/releases/download/v0.7.1/kube-bench_0.7.1_linux_amd64.tar.gz -o /tmp/kube-bench.tar.gz
-    tar -xzf /tmp/kube-bench.tar.gz -C /tmp
-    sudo mv /tmp/kube-bench /usr/local/bin/
+    cd /tmp
+    curl -L https://github.com/aquasecurity/kube-bench/releases/download/v0.7.1/kube-bench_0.7.1_linux_amd64.tar.gz -o kube-bench.tar.gz
+    tar -xzf kube-bench.tar.gz
+    sudo mv kube-bench /usr/local/bin/
     sudo chmod +x /usr/local/bin/kube-bench
-    rm /tmp/kube-bench.tar.gz
+
+    # Install config files (required for kube-bench to work)
+    sudo mkdir -p /etc/kube-bench
+    sudo cp -r cfg /etc/kube-bench/
+
+    # Clean up
+    rm -rf /tmp/kube-bench.tar.gz /tmp/cfg
     echo "✓ kube-bench installed on cplane-01"
 else
     echo "kube-bench already installed on cplane-01"
@@ -26,13 +33,20 @@ ENDSSH
 ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null node-01 'bash -s' << 'ENDSSH'
 set -e
 
-if ! command -v kube-bench &> /dev/null; then
+if ! command -v kube-bench &> /dev/null || [ ! -d /etc/kube-bench/cfg ]; then
     echo "Installing kube-bench on node-01..."
-    curl -L https://github.com/aquasecurity/kube-bench/releases/download/v0.7.1/kube-bench_0.7.1_linux_amd64.tar.gz -o /tmp/kube-bench.tar.gz
-    tar -xzf /tmp/kube-bench.tar.gz -C /tmp
-    sudo mv /tmp/kube-bench /usr/local/bin/
+    cd /tmp
+    curl -L https://github.com/aquasecurity/kube-bench/releases/download/v0.7.1/kube-bench_0.7.1_linux_amd64.tar.gz -o kube-bench.tar.gz
+    tar -xzf kube-bench.tar.gz
+    sudo mv kube-bench /usr/local/bin/
     sudo chmod +x /usr/local/bin/kube-bench
-    rm /tmp/kube-bench.tar.gz
+
+    # Install config files (required for kube-bench to work)
+    sudo mkdir -p /etc/kube-bench
+    sudo cp -r cfg /etc/kube-bench/
+
+    # Clean up
+    rm -rf /tmp/kube-bench.tar.gz /tmp/cfg
     echo "✓ kube-bench installed on node-01"
 else
     echo "kube-bench already installed on node-01"
@@ -50,5 +64,5 @@ echo "  API Server manifest: /etc/kubernetes/manifests/kube-apiserver.yaml (on c
 echo "  Output directory: /opt/course/03/"
 echo ""
 echo "Run kube-bench:"
-echo "  On cplane-01: ssh cplane-01 'sudo kube-bench run --targets=master'"
-echo "  On node-01:   ssh node-01 'sudo kube-bench run --targets=node'"
+echo "  On cplane-01: ssh cplane-01 'kube-bench run --targets=master --config-dir /etc/kube-bench/cfg'"
+echo "  On node-01:   ssh node-01 'kube-bench run --targets=node --config-dir /etc/kube-bench/cfg'"
