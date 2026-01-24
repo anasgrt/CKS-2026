@@ -28,7 +28,7 @@ wait_for_node() {
 # Function to check if AppArmor is fully functional
 check_apparmor_functional() {
     ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null key-worker \
-        'aa-status &>/dev/null && [ -d "/sys/kernel/security/apparmor" ]' 2>/dev/null
+        'sudo aa-status &>/dev/null && [ -d "/sys/kernel/security/apparmor" ]' 2>/dev/null
 }
 
 echo "Setting up AppArmor on key-worker..."
@@ -54,7 +54,7 @@ sudo systemctl enable apparmor 2>/dev/null || true
 sudo systemctl start apparmor 2>/dev/null || true
 
 # Check if AppArmor is now functional
-if [ -d "/sys/kernel/security/apparmor" ] && aa-status &>/dev/null; then
+if [ -d "/sys/kernel/security/apparmor" ] && sudo aa-status &>/dev/null; then
     echo "NO_REBOOT"
     exit 0
 fi
