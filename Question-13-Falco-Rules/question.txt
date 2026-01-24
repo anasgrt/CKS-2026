@@ -10,27 +10,20 @@ Task:
 1. Falco is installed on node 'key-worker'. SSH to this node.
 
 2. Create a custom Falco rule file at /etc/falco/rules.d/shell-detect.yaml that:
-   - Uses a macro named 'spawned_process' with condition: evt.type in (execve, execveat)
-   - Uses a macro named 'container' with condition: container.id != host
-   - Creates a rule named 'Shell Spawned in Container'
-   - Condition: spawned_process and container and proc.name in (bash, sh, ash, dash, zsh)
-   - Output must include: user=%user.name command=%proc.cmdline container=%container.name
-     pod=%k8s.pod.name namespace=%k8s.ns.name
+   - Detects when shell processes (bash, sh, ash, dash, zsh) are spawned inside containers
+   - Uses appropriate macros for process spawning and container detection
+   - Rule name: 'Shell Spawned in Container'
+   - Output must include: user, command, container name, pod name, and namespace
    - Priority: WARNING
 
 3. Restart Falco service and verify it's running
 
-4. In another terminal, trigger the rule by running:
-   kubectl exec -it <any-running-pod> -- /bin/sh
+4. Trigger the rule by executing a shell in any running pod
 
-5. Check Falco logs using: journalctl -u falco | grep "Shell spawned"
+5. Check Falco logs for the alert
 
-6. Using crictl on the worker node, identify the container ID where the shell was spawned
+6. Identify the container ID where the shell was spawned
    Save the container ID to: /opt/course/13/container-id.txt
 
 7. Save the Falco alert output to: /opt/course/13/falco-alert.txt
-
-Documentation allowed:
-- https://falco.org/docs/reference/rules/supported-fields/
-- https://falco.org/docs/reference/rules/examples/
 

@@ -20,12 +20,7 @@ Task:
 4. Create a RoleBinding named 'deploy-sa-binding' binding:
    - Role 'deployment-manager' to ServiceAccount 'deploy-sa'
 
-5. Test the permissions work correctly:
-   kubectl auth can-i create deployments --as=system:serviceaccount:cicd-ns:deploy-sa -n cicd-ns
-   Should return "yes"
-
-   kubectl auth can-i get secrets --as=system:serviceaccount:cicd-ns:deploy-sa -n cicd-ns
-   Should return "no"
+5. Test and verify that the permissions work correctly
 
 Save all manifests to:
 - /opt/course/04/sa.yaml

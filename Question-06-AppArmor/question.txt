@@ -6,9 +6,7 @@ An AppArmor profile has been created to restrict container file system writes.
 Configure pods to use this security profile.
 
 Task:
-1. SSH to key-worker and verify the AppArmor profile 'k8s-deny-write' is loaded:
-   aa-status | grep k8s-deny-write
-
+1. SSH to key-worker and verify the AppArmor profile 'k8s-deny-write' is loaded.
    If not loaded, load it from /etc/apparmor.d/k8s-deny-write
 
 2. Create namespace 'apparmor-ns' if it doesn't exist
@@ -17,25 +15,7 @@ Task:
    - Use image: nginx:alpine
    - Apply the AppArmor profile 'k8s-deny-write' to the container
 
-   Use securityContext (Kubernetes 1.30+ GA syntax):
-   spec:
-     containers:
-     - name: nginx
-       image: nginx:alpine
-       securityContext:
-         appArmorProfile:
-           type: Localhost
-           localhostProfile: k8s-deny-write
-
-4. Verify the pod is running and AppArmor is enforced:
-   kubectl exec secured-pod -n apparmor-ns -- touch /test-file
-   This should fail with "Permission denied"
-
-5. Verify AppArmor is applied:
-   kubectl get pod secured-pod -n apparmor-ns -o jsonpath='{.spec.containers[0].securityContext.appArmorProfile}'
+4. Verify the pod is running and AppArmor is enforced by attempting to write a file
 
 Save your pod YAML to: /opt/course/06/pod.yaml
 Save the AppArmor verification output to: /opt/course/06/apparmor-test.txt
-
-Note: The annotation method (container.apparmor.security.beta.kubernetes.io) is deprecated.
-CKS exam uses Kubernetes 1.30+ which supports the native securityContext approach.

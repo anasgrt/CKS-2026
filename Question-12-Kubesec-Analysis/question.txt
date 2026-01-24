@@ -9,28 +9,12 @@ Task:
 1. An insecure deployment manifest exists at /opt/course/12/insecure-deploy.yaml
    (will be created by setup script with known security issues)
 
-2. Run Kubesec scan on the deployment:
-   kubesec scan /opt/course/12/insecure-deploy.yaml
+2. Run Kubesec scan on the deployment and save the scan results to:
+   /opt/course/12/kubesec-report.json
 
-   Or using the online API:
-   curl -sSX POST --data-binary @/opt/course/12/insecure-deploy.yaml \
-     https://v2.kubesec.io/scan
+3. Analyze the report and identify the security issues
 
-   Save the scan results to: /opt/course/12/kubesec-report.json
-
-3. Analyze the report and identify:
-   - Current score
-   - Critical/passed items
-   - Recommended fixes
-
-4. Fix the security issues to achieve a score of at least 8 points:
-   Common fixes include:
-   - Add securityContext.runAsNonRoot: true
-   - Add securityContext.readOnlyRootFilesystem: true
-   - Add securityContext.allowPrivilegeEscalation: false
-   - Drop ALL capabilities
-   - Add resource limits
-   - Remove hostPID, hostIPC, hostNetwork if present
+4. Fix the security issues to achieve a score of at least 8 points
 
 5. Save the fixed deployment to: /opt/course/12/secure-deploy.yaml
 

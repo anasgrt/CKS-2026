@@ -26,14 +26,11 @@ Task:
 4. Create a ClusterRoleBinding named 'cluster-monitor-binding' that binds:
    - ClusterRole 'cluster-monitor' to ServiceAccount 'monitor-sa'
 
-5. Verify permissions:
-   kubectl auth can-i list pods --all-namespaces --as=system:serviceaccount:monitoring:monitor-sa
-   kubectl auth can-i delete pods --as=system:serviceaccount:monitoring:monitor-sa
-   kubectl auth can-i get secrets --as=system:serviceaccount:monitoring:monitor-sa
+5. Verify the permissions are correctly configured
 
 Save all manifests to:
 - /opt/course/20/clusterrole.yaml
 - /opt/course/20/sa.yaml
 - /opt/course/20/clusterrolebinding.yaml
 
-Save auth can-i test results to: /opt/course/20/permissions-test.txt
+Save permission test results to: /opt/course/20/permissions-test.txt

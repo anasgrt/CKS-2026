@@ -9,30 +9,17 @@ Block this access using NetworkPolicy.
 Task:
 1. Create namespace 'protected-ns' if it doesn't exist
 
-2. Create a NetworkPolicy named 'block-metadata' in namespace 'protected-ns':
+2. Create a NetworkPolicy named 'block-metadata' in namespace 'protected-ns' that:
+   - Applies to ALL pods in the namespace
+   - Blocks egress to 169.254.169.254 (metadata endpoint)
+   - Allows egress to all other destinations
+   - Allows DNS traffic to work
 
-   The policy must:
-   - Apply to ALL pods in the namespace (podSelector: {})
-   - Block egress to 169.254.169.254/32 (metadata endpoint)
-   - Allow egress to all other destinations
-   - Allow DNS traffic to work (kube-dns)
+3. Create a test pod in 'protected-ns'
 
-   This requires an egress rule that:
-   - Denies traffic to 169.254.169.254
-   - Allows all other egress (use ipBlock with 0.0.0.0/0 except 169.254.169.254/32)
+4. Verify metadata endpoint is blocked from the test pod
 
-3. Create a test pod in 'protected-ns':
-   kubectl run test-pod --image=busybox -n protected-ns -- sleep 3600
-
-4. Verify metadata is blocked:
-   kubectl exec -n protected-ns test-pod -- wget -qO- --timeout=2 http://169.254.169.254/
-   This should fail/timeout
-
-5. Verify other traffic still works:
-   kubectl exec -n protected-ns test-pod -- wget -qO- --timeout=2 http://google.com
-   This should work (if internet accessible) or at least DNS should resolve
+5. Verify other traffic still works from the test pod
 
 Save your NetworkPolicy to: /opt/course/18/metadata-netpol.yaml
 Save test results (blocked and allowed traffic) to: /opt/course/18/test-result.txt
-
-Note: In a real cloud environment, you'd also use node-level iptables rules as defense in depth

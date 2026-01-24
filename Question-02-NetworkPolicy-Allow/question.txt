@@ -18,7 +18,7 @@ Task:
 
    Egress:
    - Only connect to database pods on port 5432
-   - Allow DNS traffic (port 53 UDP/TCP to kube-system namespace)
+   - Allow DNS traffic
 
 3. Create NetworkPolicy 'database-policy' that allows database pods to:
    Ingress:
@@ -29,8 +29,8 @@ Task:
    - Only allow DNS (for name resolution)
    - No other egress
 
-4. Test that frontend cannot directly access database (should be blocked)
-5. Test that API can access database (should work)
+4. Test that frontend cannot directly access database
+5. Test that API can access database
 
 Save your NetworkPolicies to:
 - /opt/course/02/api-netpol.yaml
