@@ -6,14 +6,14 @@ set -e
 echo "Creating seccomp profiles on worker nodes..."
 
 # Create custom seccomp profile on key-worker
-ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null key-worker 'bash -s' << 'ENDSSH'
+ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -o LogLevel=ERROR key-worker 'bash -s' << 'ENDSSH'
 set -e
 
 # Create seccomp directory
 sudo mkdir -p /var/lib/kubelet/seccomp
 
 # Create audit-log.json profile
-sudo cat > /var/lib/kubelet/seccomp/audit-log.json << 'EOF'
+sudo tee /var/lib/kubelet/seccomp/audit-log.json > /dev/null << 'EOF'
 {
   "defaultAction": "SCMP_ACT_LOG",
   "architectures": [

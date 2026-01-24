@@ -27,7 +27,7 @@ wait_for_node() {
 
 # Function to check if AppArmor is fully functional
 check_apparmor_functional() {
-    ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null key-worker \
+    ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -o LogLevel=ERROR key-worker \
         'sudo aa-status &>/dev/null && [ -d "/sys/kernel/security/apparmor" ]' 2>/dev/null
 }
 
@@ -77,7 +77,7 @@ if [ "$NEEDS_REBOOT" = "NEEDS_REBOOT" ]; then
     echo ""
     echo "AppArmor requires a node reboot to enable kernel support..."
     echo "Rebooting key-worker..."
-    ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null key-worker 'sudo reboot' 2>/dev/null || true
+    ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -o LogLevel=ERROR key-worker 'sudo reboot' 2>/dev/null || true
 
     # Wait a moment for the reboot to initiate
     sleep 5
@@ -110,7 +110,7 @@ fi
 echo "✓ AppArmor kernel support is active"
 
 # Second pass: Create and load the profile
-ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null key-worker 'bash -s' << 'ENDSSH'
+ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -o LogLevel=ERROR key-worker 'bash -s' << 'ENDSSH'
 set -e
 
 # Ensure AppArmor is running
@@ -120,7 +120,7 @@ sudo systemctl start apparmor 2>/dev/null || true
 # Create the k8s-deny-write profile
 sudo mkdir -p /etc/apparmor.d
 
-sudo cat > /etc/apparmor.d/k8s-deny-write << 'EOF'
+sudo tee /etc/apparmor.d/k8s-deny-write > /dev/null << 'EOF'
 #include <tunables/global>
 
 profile k8s-deny-write flags=(attach_disconnected,mediate_deleted) {

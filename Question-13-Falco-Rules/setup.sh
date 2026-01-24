@@ -6,7 +6,7 @@ set -e
 echo "Setting up Falco on key-worker..."
 
 # Install Falco on key-worker
-ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null key-worker 'bash -s' << 'ENDSSH'
+ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -o LogLevel=ERROR key-worker 'bash -s' << 'ENDSSH'
 set -e
 
 # Check if Falco is already installed
@@ -21,7 +21,7 @@ if ! command -v falco &> /dev/null; then
     curl -fsSL https://falco.org/repo/falcosecurity-packages.asc | \
       sudo gpg --batch --yes --dearmor -o /usr/share/keyrings/falco-archive-keyring.gpg
 
-    sudo cat > /etc/apt/sources.list.d/falcosecurity.list << 'EOF'
+    sudo tee /etc/apt/sources.list.d/falcosecurity.list > /dev/null << 'EOF'
 deb [signed-by=/usr/share/keyrings/falco-archive-keyring.gpg] https://download.falco.org/packages/deb stable main
 EOF
 

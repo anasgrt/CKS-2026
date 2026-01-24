@@ -6,7 +6,7 @@ set -e
 echo "Installing kube-bench on nodes..."
 
 # Install kube-bench on control plane (key-ctrl)
-ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null key-ctrl 'bash -s' << 'ENDSSH'
+ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -o LogLevel=ERROR key-ctrl 'bash -s' << 'ENDSSH'
 set -e
 
 if ! command -v kube-bench &> /dev/null || [ ! -d /etc/kube-bench/cfg ]; then
@@ -30,7 +30,7 @@ fi
 ENDSSH
 
 # Install kube-bench on worker node (key-worker)
-ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null key-worker 'bash -s' << 'ENDSSH'
+ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -o LogLevel=ERROR key-worker 'bash -s' << 'ENDSSH'
 set -e
 
 if ! command -v kube-bench &> /dev/null || [ ! -d /etc/kube-bench/cfg ]; then
