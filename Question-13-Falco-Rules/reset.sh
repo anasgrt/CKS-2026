@@ -4,8 +4,8 @@
 # Delete test pod
 kubectl delete pod test-pod -n falco-ns --ignore-not-found 2>/dev/null
 
-# Clean up custom Falco rules on node-01
-ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null node-01 'bash -s' << 'ENDSSH' 2>/dev/null || true
+# Clean up custom Falco rules on key-worker
+ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null key-worker 'bash -s' << 'ENDSSH' 2>/dev/null || true
 # Remove custom rules created by user
 sudo rm -f /etc/falco/rules.d/*.yaml 2>/dev/null
 # Restart Falco to pick up changes

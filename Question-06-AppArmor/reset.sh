@@ -7,6 +7,6 @@ kubectl delete pod secured-pod -n apparmor-ns --ignore-not-found 2>/dev/null
 # Clean up output directory
 rm -rf /opt/course/06
 
-# Note: AppArmor profile 'k8s-deny-write' is kept on node-01 as it's part of the setup infrastructure
+# Note: AppArmor profile 'k8s-deny-write' is kept on key-worker as it's part of the setup infrastructure
 
 echo "Question 06 reset complete!"

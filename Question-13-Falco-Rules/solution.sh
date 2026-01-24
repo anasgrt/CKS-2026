@@ -3,12 +3,12 @@
 
 echo "Solution: Create custom Falco rule"
 echo ""
-echo "Step 1: SSH to node-01 and create the custom rule file"
+echo "Step 1: SSH to key-worker and create the custom rule file"
 echo ""
 
 cat << 'EOF'
 # SSH to the worker node
-ssh node-01
+ssh key-worker
 
 # Create the custom Falco rule with macros as specified
 cat > /etc/falco/rules.d/shell-detect.yaml << 'YAML'
@@ -38,7 +38,7 @@ echo "Step 2: Restart Falco service"
 echo ""
 
 cat << 'EOF'
-# Restart Falco to load new rule (Falco runs as systemd service on node-01)
+# Restart Falco to load new rule (Falco runs as systemd service on key-worker)
 sudo systemctl restart falco-modern-bpf
 
 # Verify Falco is running
@@ -83,5 +83,5 @@ echo "- Note: evt.dir is DEPRECATED in modern Falco - do not use it"
 echo "- container macro filters to only container events"
 echo "- Output fields use Falco field syntax like %user.name, %k8s.pod.name"
 echo "- Priority levels: DEBUG, INFO, NOTICE, WARNING, ERROR, CRITICAL, ALERT, EMERGENCY"
-echo "- Falco runs as systemd service (falco-modern-bpf) on node-01"
+echo "- Falco runs as systemd service (falco-modern-bpf) on key-worker"
 echo "- Use journalctl -u falco-modern-bpf to view logs"

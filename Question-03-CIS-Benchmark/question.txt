@@ -6,7 +6,7 @@ A security audit is required. Use kube-bench to check CIS Kubernetes Benchmark c
 and remediate the findings.
 
 Task:
-1. SSH to the control plane node 'cplane-01'
+1. SSH to the control plane node 'key-ctrl'
 
 2. Run kube-bench targeting the master components:
    kube-bench run --targets master
@@ -23,8 +23,8 @@ Task:
    b) After making changes, the kubelet will automatically restart the API server
       Wait for the API server to be healthy again
 
-4. Run kube-bench targeting the node (kubelet) on node-01:
-   ssh node-01
+4. Run kube-bench targeting the node (kubelet) on key-worker:
+   ssh key-worker
    kube-bench run --targets node
 
    If kubelet issues are found:

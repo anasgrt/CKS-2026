@@ -5,12 +5,12 @@ set -e
 
 echo "Installing kube-bench on nodes..."
 
-# Install kube-bench on control plane (cplane-01)
-ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null cplane-01 'bash -s' << 'ENDSSH'
+# Install kube-bench on control plane (key-ctrl)
+ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null key-ctrl 'bash -s' << 'ENDSSH'
 set -e
 
 if ! command -v kube-bench &> /dev/null || [ ! -d /etc/kube-bench/cfg ]; then
-    echo "Installing kube-bench on cplane-01..."
+    echo "Installing kube-bench on key-ctrl..."
     cd /tmp
     curl -L https://github.com/aquasecurity/kube-bench/releases/download/v0.7.1/kube-bench_0.7.1_linux_amd64.tar.gz -o kube-bench.tar.gz
     tar -xzf kube-bench.tar.gz
@@ -23,18 +23,18 @@ if ! command -v kube-bench &> /dev/null || [ ! -d /etc/kube-bench/cfg ]; then
 
     # Clean up
     rm -rf /tmp/kube-bench.tar.gz /tmp/cfg
-    echo "✓ kube-bench installed on cplane-01"
+    echo "✓ kube-bench installed on key-ctrl"
 else
-    echo "kube-bench already installed on cplane-01"
+    echo "kube-bench already installed on key-ctrl"
 fi
 ENDSSH
 
-# Install kube-bench on worker node (node-01)
-ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null node-01 'bash -s' << 'ENDSSH'
+# Install kube-bench on worker node (key-worker)
+ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null key-worker 'bash -s' << 'ENDSSH'
 set -e
 
 if ! command -v kube-bench &> /dev/null || [ ! -d /etc/kube-bench/cfg ]; then
-    echo "Installing kube-bench on node-01..."
+    echo "Installing kube-bench on key-worker..."
     cd /tmp
     curl -L https://github.com/aquasecurity/kube-bench/releases/download/v0.7.1/kube-bench_0.7.1_linux_amd64.tar.gz -o kube-bench.tar.gz
     tar -xzf kube-bench.tar.gz
@@ -47,9 +47,9 @@ if ! command -v kube-bench &> /dev/null || [ ! -d /etc/kube-bench/cfg ]; then
 
     # Clean up
     rm -rf /tmp/kube-bench.tar.gz /tmp/cfg
-    echo "✓ kube-bench installed on node-01"
+    echo "✓ kube-bench installed on key-worker"
 else
-    echo "kube-bench already installed on node-01"
+    echo "kube-bench already installed on key-worker"
 fi
 ENDSSH
 
@@ -60,9 +60,9 @@ echo ""
 echo "✓ Environment ready!"
 echo ""
 echo "Important paths:"
-echo "  API Server manifest: /etc/kubernetes/manifests/kube-apiserver.yaml (on cplane-01)"
+echo "  API Server manifest: /etc/kubernetes/manifests/kube-apiserver.yaml (on key-ctrl)"
 echo "  Output directory: /opt/course/03/"
 echo ""
 echo "Run kube-bench:"
-echo "  On cplane-01: ssh cplane-01 'kube-bench run --targets=master --config-dir /etc/kube-bench/cfg'"
-echo "  On node-01:   ssh node-01 'kube-bench run --targets=node --config-dir /etc/kube-bench/cfg'"
+echo "  On key-ctrl:   ssh key-ctrl 'kube-bench run --targets=master --config-dir /etc/kube-bench/cfg'"
+echo "  On key-worker: ssh key-worker 'kube-bench run --targets=node --config-dir /etc/kube-bench/cfg'"
