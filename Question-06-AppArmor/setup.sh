@@ -34,7 +34,7 @@ check_apparmor_functional() {
 echo "Setting up AppArmor on key-worker..."
 
 # First pass: Install and configure AppArmor
-NEEDS_REBOOT=$(ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null key-worker 'bash -s' << 'ENDSSH'
+NEEDS_REBOOT=$(ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -o LogLevel=ERROR key-worker 'bash -s' 2>/dev/null << 'ENDSSH'
 set -e
 
 # Install AppArmor utilities if not already installed
@@ -70,7 +70,9 @@ echo "NEEDS_REBOOT"
 ENDSSH
 )
 
-# Check if reboot is needed
+# Trim whitespace and check if reboot is needed
+NEEDS_REBOOT=$(echo "$NEEDS_REBOOT" | tr -d '[:space:]')
+
 if [ "$NEEDS_REBOOT" = "NEEDS_REBOOT" ]; then
     echo ""
     echo "AppArmor requires a node reboot to enable kernel support..."
