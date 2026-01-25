@@ -19,14 +19,13 @@ echo ""
 echo "# 3. Write fixes.txt"
 cat << 'EOF'
 cat > /opt/course/03/fixes.txt << 'TXT'
-Control Plane Fixes:
+Control Plane Fixes (kube-apiserver.yaml):
 1. --anonymous-auth=false (CIS 1.2.1)
-2. --profiling=false (CIS 1.2.18)
+2. --profiling=false (CIS 1.2.21)
 3. --authorization-mode=Node,RBAC (CIS 1.2.8)
 
 Worker Node Fixes:
-4. protect-kernel-defaults=true (CIS 4.2.6)
-5. read-only-port=0 (CIS 4.2.4)
+4. chmod 600 on kubelet service file (CIS 4.1.1)
 TXT
 EOF
 
@@ -36,17 +35,15 @@ echo ""
 echo "# 4. Run kube-bench on worker"
 echo "ssh key-worker 'kube-bench run --targets=node'"
 echo ""
-echo "# 5. Edit RKE2 config"
+echo "# 5. Fix kubelet service file permissions (CIS 4.1.1)"
 echo "ssh key-worker"
-echo "sudo vim /etc/rancher/rke2/config.yaml"
 cat << 'EOF'
-# Add:
-kubelet-arg:
-- "protect-kernel-defaults=true"
-- "read-only-port=0"
+# The kubelet service file has 644 permissions, should be 600
+sudo chmod 600 /usr/local/lib/systemd/system/rke2-agent.service
 
-# Then restart:
-sudo systemctl restart rke2-agent
+# Verify the fix:
+stat /usr/local/lib/systemd/system/rke2-agent.service | grep Access
+# Should show: Access: (0600/-rw-------)
 EOF
 
 echo ""

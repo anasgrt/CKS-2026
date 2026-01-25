@@ -82,26 +82,24 @@ if [ -f "/opt/course/03/fixes.txt" ]; then
     fi
 fi
 
-# Check kubelet configuration on worker (if we can SSH)
+# Check kubelet service file permissions on worker (CIS 4.1.1)
 echo ""
-echo "Checking kubelet configuration on key-worker..."
+echo "Checking kubelet service file permissions on key-worker..."
 
-if ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -o LogLevel=ERROR -o ConnectTimeout=5 key-worker 'test -f /etc/rancher/rke2/config.yaml' 2>/dev/null; then
-    # Check protect-kernel-defaults
-    if ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -o LogLevel=ERROR key-worker 'grep -q "protect-kernel-defaults" /etc/rancher/rke2/config.yaml' 2>/dev/null; then
-        echo -e "${GREEN}✓ protect-kernel-defaults configured on worker${NC}"
-    else
-        echo -e "${YELLOW}⚠ protect-kernel-defaults not found in worker config${NC}"
-    fi
+SSH_OPTS="-o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -o LogLevel=ERROR -o ConnectTimeout=5"
+SERVICE_FILE="/usr/local/lib/systemd/system/rke2-agent.service"
 
-    # Check read-only-port
-    if ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -o LogLevel=ERROR key-worker 'grep -q "read-only-port" /etc/rancher/rke2/config.yaml' 2>/dev/null; then
-        echo -e "${GREEN}✓ read-only-port configured on worker${NC}"
+if ssh $SSH_OPTS key-worker "test -f $SERVICE_FILE" 2>/dev/null; then
+    # Check permissions are 600 or more restrictive
+    PERMS=$(ssh $SSH_OPTS key-worker "stat -c %a $SERVICE_FILE" 2>/dev/null)
+    if [ "$PERMS" = "600" ] || [ "$PERMS" = "400" ]; then
+        echo -e "${GREEN}✓ kubelet service file permissions are $PERMS (CIS 4.1.1)${NC}"
     else
-        echo -e "${YELLOW}⚠ read-only-port not found in worker config${NC}"
+        echo -e "${RED}✗ kubelet service file permissions are $PERMS, should be 600 (CIS 4.1.1)${NC}"
+        PASS=false
     fi
 else
-    echo -e "${YELLOW}⚠ Cannot verify worker node config (SSH not available or config not found)${NC}"
+    echo -e "${YELLOW}⚠ Cannot verify worker node service file (SSH not available)${NC}"
 fi
 
 if $PASS; then
