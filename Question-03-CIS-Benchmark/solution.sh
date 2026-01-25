@@ -1,7 +1,7 @@
 #!/bin/bash
 # Solution for Question 03 - CIS Benchmark
 
-echo "=== CONTROL PLANE (key-ctrl) ==="
+echo "=== CONTROL PLANE (controlplane) ==="
 echo ""
 echo "# 1. Run kube-bench and save"
 echo "kube-bench run --targets=master > /opt/course/03/kube-bench-before.txt"
@@ -32,13 +32,13 @@ TXT
 EOF
 
 echo ""
-echo "=== WORKER NODE (key-worker) ==="
+echo "=== WORKER NODE (node01) ==="
 echo ""
 echo "# 4. Run kube-bench on worker"
-echo "ssh key-worker 'kube-bench run --targets=node'"
+echo "ssh node01 'kube-bench run --targets=node'"
 echo ""
 echo "# 5. Worker node analysis (CIS 4.1.1)"
-echo "ssh key-worker"
+echo "ssh node01"
 cat << 'EOF'
 # NOTE: kube-bench 4.1.1 shows FAIL because it checks for:
 #   /etc/systemd/system/kubelet.service.d/10-kubeadm.conf
@@ -58,6 +58,6 @@ EOF
 echo ""
 echo "# 6. Run kube-bench again"
 echo "kube-bench run --targets=master > /opt/course/03/kube-bench-after.txt"
-echo "ssh key-worker 'kube-bench run --targets=node' >> /opt/course/03/kube-bench-after.txt"
+echo "ssh node01 'kube-bench run --targets=node' >> /opt/course/03/kube-bench-after.txt"
 echo ""
 echo "Key: API server manifest auto-restarts on save. Kubelet needs service restart."

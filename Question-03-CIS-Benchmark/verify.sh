@@ -29,14 +29,14 @@ fi
 
 # Check API server configuration
 echo ""
-echo "Checking API server configuration on key-ctrl..."
+echo "Checking API server configuration on controlplane..."
 
 API_SERVER_MANIFEST="/var/lib/rancher/rke2/agent/pod-manifests/kube-apiserver.yaml"
 
 # Check via SSH to control plane
-if ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -o LogLevel=ERROR -o ConnectTimeout=5 key-ctrl "test -f $API_SERVER_MANIFEST" 2>/dev/null; then
+if ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -o LogLevel=ERROR -o ConnectTimeout=5 controlplane "test -f $API_SERVER_MANIFEST" 2>/dev/null; then
     # Check anonymous-auth
-    if ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -o LogLevel=ERROR key-ctrl "grep -q '\-\-anonymous-auth=false' $API_SERVER_MANIFEST" 2>/dev/null; then
+    if ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -o LogLevel=ERROR controlplane "grep -q '\-\-anonymous-auth=false' $API_SERVER_MANIFEST" 2>/dev/null; then
         echo -e "${GREEN}✓ anonymous-auth=false is set${NC}"
     else
         echo -e "${RED}✗ anonymous-auth should be set to false${NC}"
@@ -44,7 +44,7 @@ if ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -o LogLevel=E
     fi
 
     # Check authorization-mode includes Node,RBAC
-    if ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -o LogLevel=ERROR key-ctrl "grep -q '\-\-authorization-mode=Node,RBAC' $API_SERVER_MANIFEST" 2>/dev/null; then
+    if ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -o LogLevel=ERROR controlplane "grep -q '\-\-authorization-mode=Node,RBAC' $API_SERVER_MANIFEST" 2>/dev/null; then
         echo -e "${GREEN}✓ authorization-mode=Node,RBAC is set${NC}"
     else
         echo -e "${RED}✗ authorization-mode should be Node,RBAC${NC}"
@@ -52,14 +52,14 @@ if ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -o LogLevel=E
     fi
 
     # Check profiling is disabled
-    if ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -o LogLevel=ERROR key-ctrl "grep -q '\-\-profiling=false' $API_SERVER_MANIFEST" 2>/dev/null; then
+    if ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -o LogLevel=ERROR controlplane "grep -q '\-\-profiling=false' $API_SERVER_MANIFEST" 2>/dev/null; then
         echo -e "${GREEN}✓ profiling=false is set${NC}"
     else
         echo -e "${RED}✗ profiling should be set to false${NC}"
         PASS=false
     fi
 else
-    echo -e "${YELLOW}⚠ Cannot verify API server manifest (cannot SSH to key-ctrl)${NC}"
+    echo -e "${YELLOW}⚠ Cannot verify API server manifest (cannot SSH to controlplane)${NC}"
 fi
 
 # Check kube-bench after output exists
@@ -84,14 +84,14 @@ fi
 
 # Check kubelet service file permissions on worker (CIS 4.1.1)
 echo ""
-echo "Checking kubelet service file permissions on key-worker..."
+echo "Checking kubelet service file permissions on node01..."
 
 SSH_OPTS="-o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -o LogLevel=ERROR -o ConnectTimeout=5"
 SERVICE_FILE="/usr/local/lib/systemd/system/rke2-agent.service"
 
-if ssh $SSH_OPTS key-worker "test -f $SERVICE_FILE" 2>/dev/null; then
+if ssh $SSH_OPTS node01 "test -f $SERVICE_FILE" 2>/dev/null; then
     # Check permissions are 600 or more restrictive
-    PERMS=$(ssh $SSH_OPTS key-worker "stat -c %a $SERVICE_FILE" 2>/dev/null)
+    PERMS=$(ssh $SSH_OPTS node01 "stat -c %a $SERVICE_FILE" 2>/dev/null)
     if [ "$PERMS" = "600" ] || [ "$PERMS" = "400" ]; then
         echo -e "${GREEN}✓ kubelet service file permissions are $PERMS (CIS 4.1.1)${NC}"
     else

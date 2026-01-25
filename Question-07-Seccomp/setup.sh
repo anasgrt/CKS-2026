@@ -5,8 +5,8 @@ set -e
 
 echo "Creating seccomp profiles on worker nodes..."
 
-# Create custom seccomp profile on key-worker
-ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -o LogLevel=ERROR key-worker 'bash -s' << 'ENDSSH'
+# Create custom seccomp profile on node01
+ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -o LogLevel=ERROR node01 'bash -s' << 'ENDSSH'
 set -e
 
 # Create seccomp directory
@@ -97,7 +97,7 @@ sudo tee /var/lib/kubelet/seccomp/audit-log.json > /dev/null << 'EOF'
 }
 EOF
 
-echo "✓ Seccomp profile 'audit-log.json' created on key-worker"
+echo "✓ Seccomp profile 'audit-log.json' created on node01"
 ENDSSH
 
 # Create namespace
@@ -109,7 +109,7 @@ mkdir -p /opt/course/07
 echo ""
 echo "✓ Environment ready!"
 echo "  Namespace: seccomp-ns"
-echo "  Seccomp profile 'audit-log.json' created on key-worker"
+echo "  Seccomp profile 'audit-log.json' created on node01"
 echo ""
 echo "Verify with:"
-echo "  ssh key-worker 'ls -la /var/lib/kubelet/seccomp/'"
+echo "  ssh node01 'ls -la /var/lib/kubelet/seccomp/'"

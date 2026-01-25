@@ -4,9 +4,9 @@
 rm -rf /opt/course/16
 
 # Clean up admission config files on control plane (if accessible)
-if ssh -o StrictHostKeyChecking=no -o ConnectTimeout=5 key-ctrl 'test -d /etc/kubernetes/admission' 2>/dev/null; then
-    echo "Cleaning up admission config on key-ctrl..."
-    ssh key-ctrl 'sudo rm -rf /etc/kubernetes/admission' 2>/dev/null || true
+if ssh -o StrictHostKeyChecking=no -o ConnectTimeout=5 controlplane 'test -d /etc/kubernetes/admission' 2>/dev/null; then
+    echo "Cleaning up admission config on controlplane..."
+    ssh controlplane 'sudo rm -rf /etc/kubernetes/admission' 2>/dev/null || true
 fi
 
 echo "Question 16 reset complete!"

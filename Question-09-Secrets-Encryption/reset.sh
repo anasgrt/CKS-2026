@@ -6,9 +6,9 @@ kubectl delete namespace secrets-ns --ignore-not-found
 rm -rf /opt/course/09
 
 # Clean up encryption config files on control plane (if accessible)
-if ssh -o StrictHostKeyChecking=no -o ConnectTimeout=5 key-ctrl 'test -d /etc/kubernetes/enc' 2>/dev/null; then
-    echo "Cleaning up encryption config on key-ctrl..."
-    ssh key-ctrl 'sudo rm -rf /etc/kubernetes/enc' 2>/dev/null || true
+if ssh -o StrictHostKeyChecking=no -o ConnectTimeout=5 controlplane 'test -d /etc/kubernetes/enc' 2>/dev/null; then
+    echo "Cleaning up encryption config on controlplane..."
+    ssh controlplane 'sudo rm -rf /etc/kubernetes/enc' 2>/dev/null || true
 fi
 
 echo "Question 09 reset complete!"

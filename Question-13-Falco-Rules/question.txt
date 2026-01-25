@@ -7,7 +7,7 @@ has spawned shells inside running containers. You need to use Falco to detect an
 investigate this behavior.
 
 Task:
-1. Falco is installed on node 'key-worker'. SSH to this node.
+1. Falco is installed on node 'node01'. SSH to this node.
 
 2. Create a custom Falco rule file at /etc/falco/rules.d/shell-detect.yaml that:
    - Detects when shell processes (bash, sh, ash, dash, zsh) are spawned inside containers

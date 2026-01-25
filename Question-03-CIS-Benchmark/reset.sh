@@ -1,10 +1,10 @@
 #!/bin/bash
 # Reset Question 03 - CIS Benchmark
 
-echo "Restoring original API server configuration on key-ctrl..."
+echo "Restoring original API server configuration on controlplane..."
 
 # Restore original API server manifest from backup and clean up directory
-ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -o LogLevel=ERROR key-ctrl 'bash -s' << 'ENDSSH'
+ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -o LogLevel=ERROR controlplane 'bash -s' << 'ENDSSH'
 set -e
 
 API_SERVER_MANIFEST="/var/lib/rancher/rke2/agent/pod-manifests/kube-apiserver.yaml"
