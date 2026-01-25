@@ -13,7 +13,7 @@ Task:
    - Denies ALL ingress traffic by default
    - Denies ALL egress traffic by default
 
-3. Create a test pod in the namespace and verify it cannot:
+3. Create a test pod name it "test-pod" in the namespace and verify it cannot:
    - Receive traffic from other pods
    - Send traffic to other pods or external services
 

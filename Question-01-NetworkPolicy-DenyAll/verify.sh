@@ -62,6 +62,24 @@ else
     fi
 fi
 
+# Check output files
+echo ""
+echo "Checking output files..."
+
+if [ -f "/opt/course/01/netpol.yaml" ]; then
+    echo -e "${GREEN}✓ netpol.yaml saved${NC}"
+else
+    echo -e "${RED}✗ netpol.yaml not found at /opt/course/01/netpol.yaml${NC}"
+    PASS=false
+fi
+
+if [ -f "/opt/course/01/test-output.txt" ]; then
+    echo -e "${GREEN}✓ test-output.txt saved${NC}"
+else
+    echo -e "${RED}✗ test-output.txt not found at /opt/course/01/test-output.txt${NC}"
+    PASS=false
+fi
+
 if $PASS; then
     exit 0
 else
