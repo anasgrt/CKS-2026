@@ -12,7 +12,7 @@ ssh key-worker
 aa-status | grep k8s-deny-write
 
 # If not loaded, load it:
-sudo apparmor_parser -q /etc/apparmor.d/k8s-deny-write
+sudo apparmor_parser -r /etc/apparmor.d/k8s-deny-write
 EOF
 
 echo ""
