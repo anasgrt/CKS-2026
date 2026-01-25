@@ -61,12 +61,13 @@ else
     PASS=false
 fi
 
-# Check pod spec automountServiceAccountToken
+# Check automountServiceAccountToken (either SA or Pod level is sufficient per K8s docs)
+SA_TOKEN=$(kubectl get serviceaccount restricted-sa -n secure-ns -o jsonpath='{.automountServiceAccountToken}')
 POD_TOKEN=$(kubectl get deployment insecure-app -n secure-ns -o jsonpath='{.spec.template.spec.automountServiceAccountToken}')
-if [ "$POD_TOKEN" == "false" ]; then
-    echo -e "${GREEN}✓ Pod spec has automountServiceAccountToken: false${NC}"
+if [ "$SA_TOKEN" == "false" ] || [ "$POD_TOKEN" == "false" ]; then
+    echo -e "${GREEN}✓ automountServiceAccountToken disabled (SA or Pod level)${NC}"
 else
-    echo -e "${RED}✗ Pod spec should have automountServiceAccountToken: false${NC}"
+    echo -e "${RED}✗ automountServiceAccountToken should be false on SA or Pod${NC}"
     PASS=false
 fi
 
