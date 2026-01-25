@@ -29,38 +29,37 @@ fi
 
 # Check API server configuration
 echo ""
-echo "Checking API server configuration..."
+echo "Checking API server configuration on key-ctrl..."
 
-# Note: This simulates checking - in real exam you'd check the actual API server
 API_SERVER_MANIFEST="/var/lib/rancher/rke2/agent/pod-manifests/kube-apiserver.yaml"
 
-if [ -f "$API_SERVER_MANIFEST" ]; then
+# Check via SSH to control plane
+if ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -o LogLevel=ERROR -o ConnectTimeout=5 key-ctrl "test -f $API_SERVER_MANIFEST" 2>/dev/null; then
     # Check anonymous-auth
-    if grep -q "\-\-anonymous-auth=false" "$API_SERVER_MANIFEST"; then
+    if ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -o LogLevel=ERROR key-ctrl "grep -q '\-\-anonymous-auth=false' $API_SERVER_MANIFEST" 2>/dev/null; then
         echo -e "${GREEN}✓ anonymous-auth=false is set${NC}"
     else
         echo -e "${RED}✗ anonymous-auth should be set to false${NC}"
         PASS=false
     fi
-    
-    # Check authorization-mode includes RBAC
-    if grep -q "\-\-authorization-mode=.*RBAC" "$API_SERVER_MANIFEST"; then
-        echo -e "${GREEN}✓ authorization-mode includes RBAC${NC}"
+
+    # Check authorization-mode includes Node,RBAC
+    if ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -o LogLevel=ERROR key-ctrl "grep -q '\-\-authorization-mode=Node,RBAC' $API_SERVER_MANIFEST" 2>/dev/null; then
+        echo -e "${GREEN}✓ authorization-mode=Node,RBAC is set${NC}"
     else
-        echo -e "${RED}✗ authorization-mode should include RBAC${NC}"
+        echo -e "${RED}✗ authorization-mode should be Node,RBAC${NC}"
         PASS=false
     fi
-    
+
     # Check profiling is disabled
-    if grep -q "\-\-profiling=false" "$API_SERVER_MANIFEST"; then
+    if ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -o LogLevel=ERROR key-ctrl "grep -q '\-\-profiling=false' $API_SERVER_MANIFEST" 2>/dev/null; then
         echo -e "${GREEN}✓ profiling=false is set${NC}"
     else
         echo -e "${RED}✗ profiling should be set to false${NC}"
         PASS=false
     fi
 else
-    echo -e "${YELLOW}⚠ Cannot verify API server manifest (not running on control plane)${NC}"
-    echo -e "${YELLOW}  Make sure you've made the changes on the control plane node${NC}"
+    echo -e "${YELLOW}⚠ Cannot verify API server manifest (cannot SSH to key-ctrl)${NC}"
 fi
 
 # Check kube-bench after output exists
