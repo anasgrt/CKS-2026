@@ -9,7 +9,8 @@ echo "Installing kube-bench on nodes..."
 ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -o LogLevel=ERROR key-ctrl 'bash -s' << 'ENDSSH'
 set -e
 
-if ! command -v kube-bench &> /dev/null || [ ! -d /etc/kube-bench/cfg ]; then
+# Check if kube-bench works (not just exists) - handles wrong architecture
+if ! kube-bench version &> /dev/null || [ ! -d /etc/kube-bench/cfg ]; then
     echo "Installing kube-bench on key-ctrl..."
     cd /tmp
 
@@ -42,7 +43,8 @@ ENDSSH
 ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -o LogLevel=ERROR key-worker 'bash -s' << 'ENDSSH'
 set -e
 
-if ! command -v kube-bench &> /dev/null || [ ! -d /etc/kube-bench/cfg ]; then
+# Check if kube-bench works (not just exists) - handles wrong architecture
+if ! kube-bench version &> /dev/null || [ ! -d /etc/kube-bench/cfg ]; then
     echo "Installing kube-bench on key-worker..."
     cd /tmp
 
