@@ -35,7 +35,8 @@ spec:
       localhostProfile: k8s-deny-write
   containers:
   - name: secured-pod
-    image: nginx:alpine
+    image: busybox:1.36
+    command: ["sh", "-c", "echo 'AppArmor secured!' && sleep 1h"]
 YAML
 
 kubectl apply -f /opt/course/06/pod.yaml
