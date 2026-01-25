@@ -89,7 +89,7 @@ fi
 echo ""
 echo "Checking API server configuration..."
 
-API_SERVER_MANIFEST="/var/lib/rancher/rke2/agent/pod-manifests/kube-apiserver.yaml"
+API_SERVER_MANIFEST="/etc/kubernetes/manifests/kube-apiserver.yaml"
 
 if [ -f "$API_SERVER_MANIFEST" ]; then
     if grep -q "audit-policy-file" "$API_SERVER_MANIFEST"; then

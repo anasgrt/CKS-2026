@@ -6,7 +6,7 @@ A security audit is required. Use kube-bench to check CIS Kubernetes Benchmark c
 and remediate the findings.
 
 Task:
-1. SSH to the control plane node 'key-ctrl'
+1. SSH to the control plane node 'controlplane'
 
 2. Run kube-bench targeting the master components
    Save this output to: /opt/course/03/kube-bench-before.txt
@@ -16,7 +16,7 @@ Task:
    - Profiling configuration
    - Any insecure port configurations
 
-4. Run kube-bench targeting the node (kubelet) on key-worker and fix any issues found
+4. Run kube-bench targeting the node (kubelet) on node01 and fix any issues found
 
 5. Save your remediation summary to: /opt/course/03/fixes.txt
    Include which file was changed and what parameters were modified

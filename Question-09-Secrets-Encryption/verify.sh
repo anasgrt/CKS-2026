@@ -39,12 +39,12 @@ fi
 if kubectl get secret test-secret -n secrets-ns &>/dev/null; then
     echo -e "${GREEN}✓ Secret 'test-secret' exists${NC}"
 
-    # Check secret has correct key
-    PASSWORD=$(kubectl get secret test-secret -n secrets-ns -o jsonpath='{.data.password}' | base64 -d)
+    # Check secret has correct value (as per solution.sh)
+    PASSWORD=$(kubectl get secret test-secret -n secrets-ns -o jsonpath='{.data.password}' 2>/dev/null | base64 -d 2>/dev/null)
     if [ "$PASSWORD" == "supersecret" ]; then
         echo -e "${GREEN}✓ Secret contains correct password value${NC}"
     else
-        echo -e "${RED}✗ Secret password value incorrect${NC}"
+        echo -e "${RED}✗ Secret should have password=supersecret (as per solution)${NC}"
         PASS=false
     fi
 else
@@ -61,8 +61,8 @@ else
 fi
 
 # Check API server has encryption config (if we can access the manifest)
-if [ -f "/var/lib/rancher/rke2/agent/pod-manifests/kube-apiserver.yaml" ]; then
-    if grep -q "encryption-provider-config" /var/lib/rancher/rke2/agent/pod-manifests/kube-apiserver.yaml; then
+if [ -f "/etc/kubernetes/manifests/kube-apiserver.yaml" ]; then
+    if grep -q "encryption-provider-config" /etc/kubernetes/manifests/kube-apiserver.yaml; then
         echo -e "${GREEN}✓ API server configured with encryption provider${NC}"
     else
         echo -e "${RED}✗ API server should have --encryption-provider-config flag${NC}"

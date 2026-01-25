@@ -52,7 +52,7 @@ EOF
 
 echo ""
 echo "=== Step 2: Edit API Server (kubectl edit not available - use vim) ==="
-echo "sudo vim /var/lib/rancher/rke2/agent/pod-manifests/kube-apiserver.yaml"
+echo "sudo vim /etc/kubernetes/manifests/kube-apiserver.yaml"
 cat << 'EOF'
 # Add to command section:
     - --audit-policy-file=/etc/kubernetes/audit/policy.yaml

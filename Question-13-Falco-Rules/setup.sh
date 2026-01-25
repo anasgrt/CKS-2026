@@ -3,10 +3,10 @@
 
 set -e
 
-echo "Setting up Falco on key-worker..."
+echo "Setting up Falco on node01..."
 
-# Install Falco on key-worker
-ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -o LogLevel=ERROR key-worker 'bash -s' << 'ENDSSH'
+# Install Falco on node01
+ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -o LogLevel=ERROR node01 'bash -s' << 'ENDSSH'
 set -e
 
 # Check if Falco is already installed
@@ -83,8 +83,8 @@ echo ""
 echo "✓ Environment ready!"
 echo "  Namespace: falco-ns"
 echo "  Test pod: test-pod"
-echo "  Falco running on key-worker"
+echo "  Falco running on node01"
 echo ""
 echo "Check Falco logs with:"
-echo "  ssh key-worker 'sudo journalctl -u falco-modern-bpf -f'"
-echo "  ssh key-worker 'sudo journalctl -u falco-modern-bpf | tail -20'"
+echo "  ssh node01 'sudo journalctl -u falco-modern-bpf -f'"
+echo "  ssh node01 'sudo journalctl -u falco-modern-bpf | tail -20'"

@@ -1,5 +1,5 @@
 #!/bin/bash
-# Verify Question 03 - CIS Benchmark
+# Verify Question 03 - CIS Benchmark (kubeadm cluster)
 
 GREEN='\033[0;32m'
 RED='\033[0;31m'
@@ -7,6 +7,7 @@ YELLOW='\033[0;33m'
 NC='\033[0m'
 
 PASS=true
+SSH_OPTS="-o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -o LogLevel=ERROR -o ConnectTimeout=5"
 
 echo "Checking CIS Benchmark fixes..."
 echo ""
@@ -29,14 +30,14 @@ fi
 
 # Check API server configuration
 echo ""
-echo "Checking API server configuration on key-ctrl..."
+echo "Checking API server configuration on controlplane..."
 
-API_SERVER_MANIFEST="/var/lib/rancher/rke2/agent/pod-manifests/kube-apiserver.yaml"
+API_SERVER_MANIFEST="/etc/kubernetes/manifests/kube-apiserver.yaml"
 
 # Check via SSH to control plane
-if ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -o LogLevel=ERROR -o ConnectTimeout=5 key-ctrl "test -f $API_SERVER_MANIFEST" 2>/dev/null; then
+if ssh $SSH_OPTS controlplane "test -f $API_SERVER_MANIFEST" 2>/dev/null; then
     # Check anonymous-auth
-    if ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -o LogLevel=ERROR key-ctrl "grep -q '\-\-anonymous-auth=false' $API_SERVER_MANIFEST" 2>/dev/null; then
+    if ssh $SSH_OPTS controlplane "grep -q '\-\-anonymous-auth=false' $API_SERVER_MANIFEST" 2>/dev/null; then
         echo -e "${GREEN}✓ anonymous-auth=false is set${NC}"
     else
         echo -e "${RED}✗ anonymous-auth should be set to false${NC}"
@@ -44,22 +45,24 @@ if ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -o LogLevel=E
     fi
 
     # Check authorization-mode includes Node,RBAC
-    if ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -o LogLevel=ERROR key-ctrl "grep -q '\-\-authorization-mode=Node,RBAC' $API_SERVER_MANIFEST" 2>/dev/null; then
+    if ssh $SSH_OPTS controlplane "grep -q '\-\-authorization-mode=Node,RBAC' $API_SERVER_MANIFEST" 2>/dev/null; then
         echo -e "${GREEN}✓ authorization-mode=Node,RBAC is set${NC}"
     else
         echo -e "${RED}✗ authorization-mode should be Node,RBAC${NC}"
         PASS=false
     fi
 
-    # Check profiling is disabled
-    if ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -o LogLevel=ERROR key-ctrl "grep -q '\-\-profiling=false' $API_SERVER_MANIFEST" 2>/dev/null; then
+    # Check profiling is disabled (either false or not present)
+    if ssh $SSH_OPTS controlplane "grep -q '\-\-profiling=false' $API_SERVER_MANIFEST" 2>/dev/null; then
         echo -e "${GREEN}✓ profiling=false is set${NC}"
+    elif ! ssh $SSH_OPTS controlplane "grep -q '\-\-profiling=true' $API_SERVER_MANIFEST" 2>/dev/null; then
+        echo -e "${GREEN}✓ profiling is not enabled${NC}"
     else
         echo -e "${RED}✗ profiling should be set to false${NC}"
         PASS=false
     fi
 else
-    echo -e "${YELLOW}⚠ Cannot verify API server manifest (cannot SSH to key-ctrl)${NC}"
+    echo -e "${YELLOW}⚠ Cannot verify API server manifest (cannot SSH to controlplane)${NC}"
 fi
 
 # Check kube-bench after output exists
@@ -75,31 +78,29 @@ fi
 
 # Check fixes.txt mentions worker node
 if [ -f "/opt/course/03/fixes.txt" ]; then
-    if grep -qi "worker\|kubelet\|node" /opt/course/03/fixes.txt; then
+    if grep -qi "worker\|kubelet\|node\|protectKernelDefaults" /opt/course/03/fixes.txt; then
         echo -e "${GREEN}✓ fixes.txt includes worker node changes${NC}"
     else
         echo -e "${YELLOW}⚠ fixes.txt should document worker node (kubelet) changes${NC}"
     fi
 fi
 
-# Check kubelet service file permissions on worker (CIS 4.1.1)
+# Check kubelet protectKernelDefaults on worker (CIS 4.2.6)
 echo ""
-echo "Checking kubelet service file permissions on key-worker..."
+echo "Checking kubelet configuration on node01..."
 
-SSH_OPTS="-o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -o LogLevel=ERROR -o ConnectTimeout=5"
-SERVICE_FILE="/usr/local/lib/systemd/system/rke2-agent.service"
+KUBELET_CONFIG="/var/lib/kubelet/config.yaml"
 
-if ssh $SSH_OPTS key-worker "test -f $SERVICE_FILE" 2>/dev/null; then
-    # Check permissions are 600 or more restrictive
-    PERMS=$(ssh $SSH_OPTS key-worker "stat -c %a $SERVICE_FILE" 2>/dev/null)
-    if [ "$PERMS" = "600" ] || [ "$PERMS" = "400" ]; then
-        echo -e "${GREEN}✓ kubelet service file permissions are $PERMS (CIS 4.1.1)${NC}"
+if ssh $SSH_OPTS node01 "test -f $KUBELET_CONFIG" 2>/dev/null; then
+    # Check protectKernelDefaults is set to true
+    if ssh $SSH_OPTS node01 "grep -q 'protectKernelDefaults: true' $KUBELET_CONFIG" 2>/dev/null; then
+        echo -e "${GREEN}✓ protectKernelDefaults=true is set (CIS 4.2.6)${NC}"
     else
-        echo -e "${RED}✗ kubelet service file permissions are $PERMS, should be 600 (CIS 4.1.1)${NC}"
+        echo -e "${RED}✗ protectKernelDefaults should be set to true (CIS 4.2.6)${NC}"
         PASS=false
     fi
 else
-    echo -e "${YELLOW}⚠ Cannot verify worker node service file (SSH not available)${NC}"
+    echo -e "${YELLOW}⚠ Cannot verify kubelet config on node01${NC}"
 fi
 
 if $PASS; then

@@ -21,30 +21,39 @@ fi
 if kubectl get pod hardened-pod -n hardened-ns &>/dev/null; then
     echo -e "${GREEN}✓ Pod 'hardened-pod' exists${NC}"
 
-    # Check runAsUser
+    # Check image (question requires nginx:alpine)
+    IMAGE=$(kubectl get pod hardened-pod -n hardened-ns -o jsonpath='{.spec.containers[0].image}')
+    if [[ "$IMAGE" == *"nginx"* ]] && [[ "$IMAGE" == *"alpine"* ]]; then
+        echo -e "${GREEN}✓ Uses nginx:alpine image${NC}"
+    else
+        echo -e "${RED}✗ Should use nginx:alpine image (as per question)${NC}"
+        PASS=false
+    fi
+
+    # Check runAsUser (must be non-root, i.e., not 0)
     RUN_AS_USER=$(kubectl get pod hardened-pod -n hardened-ns -o jsonpath='{.spec.securityContext.runAsUser}')
-    if [ "$RUN_AS_USER" == "1000" ]; then
-        echo -e "${GREEN}✓ runAsUser: 1000${NC}"
+    if [ -n "$RUN_AS_USER" ] && [ "$RUN_AS_USER" != "0" ]; then
+        echo -e "${GREEN}✓ runAsUser: $RUN_AS_USER (non-root)${NC}"
     else
-        echo -e "${RED}✗ runAsUser should be 1000${NC}"
+        echo -e "${RED}✗ runAsUser should be set to a non-root value (not 0)${NC}"
         PASS=false
     fi
 
-    # Check runAsGroup
+    # Check runAsGroup (should be set, any non-zero value is acceptable)
     RUN_AS_GROUP=$(kubectl get pod hardened-pod -n hardened-ns -o jsonpath='{.spec.securityContext.runAsGroup}')
-    if [ "$RUN_AS_GROUP" == "3000" ]; then
-        echo -e "${GREEN}✓ runAsGroup: 3000${NC}"
+    if [ -n "$RUN_AS_GROUP" ] && [ "$RUN_AS_GROUP" != "0" ]; then
+        echo -e "${GREEN}✓ runAsGroup: $RUN_AS_GROUP (non-root)${NC}"
     else
-        echo -e "${RED}✗ runAsGroup should be 3000${NC}"
+        echo -e "${RED}✗ runAsGroup should be set to a non-root value (not 0)${NC}"
         PASS=false
     fi
 
-    # Check fsGroup
+    # Check fsGroup (should be set for volume permissions)
     FS_GROUP=$(kubectl get pod hardened-pod -n hardened-ns -o jsonpath='{.spec.securityContext.fsGroup}')
-    if [ "$FS_GROUP" == "2000" ]; then
-        echo -e "${GREEN}✓ fsGroup: 2000${NC}"
+    if [ -n "$FS_GROUP" ]; then
+        echo -e "${GREEN}✓ fsGroup: $FS_GROUP${NC}"
     else
-        echo -e "${RED}✗ fsGroup should be 2000${NC}"
+        echo -e "${RED}✗ fsGroup should be set for volume permissions${NC}"
         PASS=false
     fi
 

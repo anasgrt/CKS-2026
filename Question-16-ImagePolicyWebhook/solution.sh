@@ -58,7 +58,7 @@ echo "Step 4: Configure API server"
 echo ""
 
 cat << 'EOF'
-# Edit /var/lib/rancher/rke2/agent/pod-manifests/kube-apiserver.yaml
+# Edit /etc/kubernetes/manifests/kube-apiserver.yaml
 # Add/modify these flags:
 
     - --enable-admission-plugins=NodeRestriction,ImagePolicyWebhook

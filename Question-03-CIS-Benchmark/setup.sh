@@ -5,13 +5,13 @@ set -e
 
 echo "Installing kube-bench on nodes..."
 
-# Install kube-bench on control plane (key-ctrl)
-ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -o LogLevel=ERROR key-ctrl 'bash -s' << 'ENDSSH'
+# Install kube-bench on control plane (controlplane)
+ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -o LogLevel=ERROR controlplane 'bash -s' << 'ENDSSH'
 set -e
 
 # Check if kube-bench works (not just exists) - handles wrong architecture
 if ! kube-bench version &> /dev/null || [ ! -d /etc/kube-bench/cfg ]; then
-    echo "Installing kube-bench on key-ctrl..."
+    echo "Installing kube-bench on controlplane..."
     cd /tmp
 
     # Detect architecture
@@ -33,19 +33,19 @@ if ! kube-bench version &> /dev/null || [ ! -d /etc/kube-bench/cfg ]; then
 
     # Clean up
     rm -rf /tmp/kube-bench.tar.gz /tmp/cfg
-    echo "✓ kube-bench installed on key-ctrl"
+    echo "✓ kube-bench installed on controlplane"
 else
-    echo "kube-bench already installed on key-ctrl"
+    echo "kube-bench already installed on controlplane"
 fi
 ENDSSH
 
-# Install kube-bench on worker node (key-worker)
-ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -o LogLevel=ERROR key-worker 'bash -s' << 'ENDSSH'
+# Install kube-bench on worker node (node01)
+ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -o LogLevel=ERROR node01 'bash -s' << 'ENDSSH'
 set -e
 
 # Check if kube-bench works (not just exists) - handles wrong architecture
 if ! kube-bench version &> /dev/null || [ ! -d /etc/kube-bench/cfg ]; then
-    echo "Installing kube-bench on key-worker..."
+    echo "Installing kube-bench on node01..."
     cd /tmp
 
     # Detect architecture
@@ -67,9 +67,9 @@ if ! kube-bench version &> /dev/null || [ ! -d /etc/kube-bench/cfg ]; then
 
     # Clean up
     rm -rf /tmp/kube-bench.tar.gz /tmp/cfg
-    echo "✓ kube-bench installed on key-worker"
+    echo "✓ kube-bench installed on node01"
 else
-    echo "kube-bench already installed on key-worker"
+    echo "kube-bench already installed on node01"
 fi
 ENDSSH
 
@@ -77,10 +77,10 @@ echo ""
 echo "Introducing security misconfigurations for the exercise..."
 
 # Introduce security misconfigurations on control plane for user to fix
-ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -o LogLevel=ERROR key-ctrl 'bash -s' << 'ENDSSH'
+ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -o LogLevel=ERROR controlplane 'bash -s' << 'ENDSSH'
 set -e
 
-API_SERVER_MANIFEST="/var/lib/rancher/rke2/agent/pod-manifests/kube-apiserver.yaml"
+API_SERVER_MANIFEST="/etc/kubernetes/manifests/kube-apiserver.yaml"
 
 # Backup original manifest
 sudo cp "$API_SERVER_MANIFEST" "${API_SERVER_MANIFEST}.backup"
@@ -89,13 +89,17 @@ sudo cp "$API_SERVER_MANIFEST" "${API_SERVER_MANIFEST}.backup"
 # 1. Enable anonymous auth (insecure)
 sudo sed -i 's/--anonymous-auth=false/--anonymous-auth=true/' "$API_SERVER_MANIFEST"
 
-# 2. Enable profiling (security risk)
-sudo sed -i 's/--profiling=false/--profiling=true/' "$API_SERVER_MANIFEST"
+# 2. Enable profiling (security risk) - add if not present or change to true
+if grep -q "\-\-profiling=" "$API_SERVER_MANIFEST"; then
+    sudo sed -i 's/--profiling=false/--profiling=true/' "$API_SERVER_MANIFEST"
+else
+    sudo sed -i '/--anonymous-auth/a\    - --profiling=true' "$API_SERVER_MANIFEST"
+fi
 
 # 3. Remove Node from authorization-mode (weaker authorization)
 sudo sed -i 's/--authorization-mode=Node,RBAC/--authorization-mode=RBAC/' "$API_SERVER_MANIFEST"
 
-echo "✓ Security misconfigurations introduced on key-ctrl"
+echo "✓ Security misconfigurations introduced on controlplane"
 echo "  - anonymous-auth=true (should be false)"
 echo "  - profiling=true (should be false)"
 echo "  - authorization-mode=RBAC (should include Node)"
@@ -107,16 +111,40 @@ ENDSSH
 
 # Wait for API server to restart with new config
 echo "Waiting for API server to restart..."
-sleep 15
+sleep 20
+
+# Introduce worker node misconfiguration for CIS 4.2.6
+echo ""
+echo "Introducing kubelet misconfiguration on worker node..."
+
+ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -o LogLevel=ERROR node01 'bash -s' << 'ENDSSH'
+set -e
+
+KUBELET_CONFIG="/var/lib/kubelet/config.yaml"
+
+# Backup kubelet config
+sudo cp "$KUBELET_CONFIG" "${KUBELET_CONFIG}.backup"
+
+# Ensure protectKernelDefaults is false or removed (causes CIS 4.2.6 to fail)
+if grep -q "protectKernelDefaults:" "$KUBELET_CONFIG"; then
+    sudo sed -i 's/protectKernelDefaults: true/protectKernelDefaults: false/' "$KUBELET_CONFIG"
+fi
+
+# Restart kubelet to apply changes
+sudo systemctl restart kubelet
+
+echo "✓ Kubelet misconfiguration introduced on node01"
+echo "  - protectKernelDefaults not set to true (CIS 4.2.6)"
+ENDSSH
 
 echo ""
 echo "✓ Environment ready!"
 echo ""
 echo "Important paths:"
-echo "  API Server manifest: /var/lib/rancher/rke2/agent/pod-manifests/kube-apiserver.yaml (on key-ctrl)"
-echo "  Kubelet config: /etc/rancher/rke2/config.yaml (on key-worker)"
-echo "  Output directory: /opt/course/03/ (on key-ctrl)"
+echo "  API Server manifest: /etc/kubernetes/manifests/kube-apiserver.yaml (on controlplane)"
+echo "  Kubelet config: /var/lib/kubelet/config.yaml (on node01)"
+echo "  Output directory: /opt/course/03/ (on controlplane)"
 echo ""
 echo "Run kube-bench:"
-echo "  On key-ctrl:   ssh key-ctrl 'kube-bench run --targets=master --config-dir /etc/kube-bench/cfg'"
-echo "  On key-worker: ssh key-worker 'kube-bench run --targets=node --config-dir /etc/kube-bench/cfg'"
+echo "  On controlplane: kube-bench run --targets=master"
+echo "  On node01:       ssh node01 'kube-bench run --targets=node'"

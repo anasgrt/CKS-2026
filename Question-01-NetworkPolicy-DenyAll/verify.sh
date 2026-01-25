@@ -7,6 +7,25 @@ NC='\033[0m'
 
 PASS=true
 
+echo "Checking namespace and test pod..."
+
+# Check namespace exists
+if kubectl get namespace isolated-ns &>/dev/null; then
+    echo -e "${GREEN}✓ Namespace 'isolated-ns' exists${NC}"
+else
+    echo -e "${RED}✗ Namespace 'isolated-ns' not found${NC}"
+    PASS=false
+fi
+
+# Check test-pod exists (question requirement)
+if kubectl get pod test-pod -n isolated-ns &>/dev/null; then
+    echo -e "${GREEN}✓ Test pod 'test-pod' exists${NC}"
+else
+    echo -e "${RED}✗ Test pod 'test-pod' not found in isolated-ns${NC}"
+    PASS=false
+fi
+
+echo ""
 echo "Checking NetworkPolicy 'default-deny-all' in namespace 'isolated-ns'..."
 
 # Check if NetworkPolicy exists
