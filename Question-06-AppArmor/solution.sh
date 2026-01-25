@@ -29,13 +29,13 @@ metadata:
   name: secured-pod
   namespace: apparmor-ns
 spec:
+  securityContext:
+    appArmorProfile:
+      type: Localhost
+      localhostProfile: k8s-deny-write
   containers:
-  - name: nginx
+  - name: secured-pod
     image: nginx:alpine
-    securityContext:
-      appArmorProfile:
-        type: Localhost
-        localhostProfile: k8s-deny-write
 YAML
 
 kubectl apply -f /opt/course/06/pod.yaml
@@ -49,13 +49,13 @@ cat << 'EOF'
 # Wait for pod to be ready
 kubectl wait --for=condition=Ready pod/secured-pod -n apparmor-ns --timeout=30s
 
-# Test that write is denied
-kubectl exec secured-pod -n apparmor-ns -- touch /test-file 2>&1 | tee /opt/course/06/apparmor-test.txt
+# Test that write is denied (use /tmp which is covered by deny rules)
+kubectl exec secured-pod -n apparmor-ns -- touch /tmp/test-file 2>&1 | tee /opt/course/06/apparmor-test.txt
 
-# Should see "Permission denied" or "Read-only file system"
+# Should see "Permission denied"
 
 # Verify AppArmor profile is applied
-kubectl get pod secured-pod -n apparmor-ns -o jsonpath='{.spec.containers[0].securityContext.appArmorProfile}'
+kubectl get pod secured-pod -n apparmor-ns -o jsonpath='{.spec.securityContext.appArmorProfile}'
 EOF
 
 echo ""

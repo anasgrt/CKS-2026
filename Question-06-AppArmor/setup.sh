@@ -129,18 +129,28 @@ profile k8s-deny-write flags=(attach_disconnected,mediate_deleted) {
   # Allow network access
   network,
 
-  # Allow reading most files
-  / r,
-  /** r,
+  # Allow reading and executing files
+  file,
 
-  # Deny all write operations
-  deny /** w,
+  # Deny file write operations (but allow /dev, /proc, /sys writes)
+  deny /bin/** w,
+  deny /boot/** w,
+  deny /etc/** w,
+  deny /home/** w,
+  deny /lib/** w,
+  deny /lib64/** w,
+  deny /media/** w,
+  deny /mnt/** w,
+  deny /opt/** w,
+  deny /root/** w,
+  deny /sbin/** w,
+  deny /srv/** w,
+  deny /tmp/** w,
+  deny /usr/** w,
+  deny /var/** w,
 
   # Allow necessary capabilities
-  capability setgid,
-  capability setuid,
-  capability dac_override,
-  capability net_bind_service,
+  capability,
 }
 EOF
 
