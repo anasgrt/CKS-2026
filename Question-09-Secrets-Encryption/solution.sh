@@ -25,7 +25,7 @@ EOF
 
 echo ""
 echo "=== Step 2: Edit API Server ==="
-echo "sudo vim /var/lib/rancher/rke2/agent/pod-manifests/kube-apiserver.yaml"
+echo "sudo vim /etc/kubernetes/manifests/kube-apiserver.yaml"
 cat << 'EOF'
 # Add to command:
     - --encryption-provider-config=/etc/kubernetes/enc/encryption-config.yaml
@@ -49,9 +49,9 @@ echo ""
 echo "# Verify in etcd (look for 'k8s:enc:aescbc' prefix, NOT plain text):"
 cat << 'EOF'
 ETCDCTL_API=3 etcdctl \
-  --cacert=/var/lib/rancher/rke2/server/tls/etcd/server-ca.crt \
-  --cert=/var/lib/rancher/rke2/server/tls/etcd/server-client.crt \
-  --key=/var/lib/rancher/rke2/server/tls/etcd/server-client.key \
+  --cacert=/etc/kubernetes/pki/etcd/ca.crt \
+  --cert=/etc/kubernetes/pki/etcd/server.crt \
+  --key=/etc/kubernetes/pki/etcd/server.key \
   get /registry/secrets/secrets-ns/test-secret | hexdump -C > /opt/course/09/verification.txt
 EOF
 echo ""

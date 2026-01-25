@@ -80,7 +80,7 @@ echo "Introducing security misconfigurations for the exercise..."
 ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -o LogLevel=ERROR controlplane 'bash -s' << 'ENDSSH'
 set -e
 
-API_SERVER_MANIFEST="/var/lib/rancher/rke2/agent/pod-manifests/kube-apiserver.yaml"
+API_SERVER_MANIFEST="/etc/kubernetes/manifests/kube-apiserver.yaml"
 
 # Backup original manifest
 sudo cp "$API_SERVER_MANIFEST" "${API_SERVER_MANIFEST}.backup"
@@ -89,8 +89,12 @@ sudo cp "$API_SERVER_MANIFEST" "${API_SERVER_MANIFEST}.backup"
 # 1. Enable anonymous auth (insecure)
 sudo sed -i 's/--anonymous-auth=false/--anonymous-auth=true/' "$API_SERVER_MANIFEST"
 
-# 2. Enable profiling (security risk)
-sudo sed -i 's/--profiling=false/--profiling=true/' "$API_SERVER_MANIFEST"
+# 2. Enable profiling (security risk) - add if not present or change to true
+if grep -q "\-\-profiling=" "$API_SERVER_MANIFEST"; then
+    sudo sed -i 's/--profiling=false/--profiling=true/' "$API_SERVER_MANIFEST"
+else
+    sudo sed -i '/--anonymous-auth/a\    - --profiling=true' "$API_SERVER_MANIFEST"
+fi
 
 # 3. Remove Node from authorization-mode (weaker authorization)
 sudo sed -i 's/--authorization-mode=Node,RBAC/--authorization-mode=RBAC/' "$API_SERVER_MANIFEST"
@@ -107,16 +111,40 @@ ENDSSH
 
 # Wait for API server to restart with new config
 echo "Waiting for API server to restart..."
-sleep 15
+sleep 20
+
+# Introduce worker node misconfiguration for CIS 4.2.6
+echo ""
+echo "Introducing kubelet misconfiguration on worker node..."
+
+ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -o LogLevel=ERROR node01 'bash -s' << 'ENDSSH'
+set -e
+
+KUBELET_CONFIG="/var/lib/kubelet/config.yaml"
+
+# Backup kubelet config
+sudo cp "$KUBELET_CONFIG" "${KUBELET_CONFIG}.backup"
+
+# Ensure protectKernelDefaults is false or removed (causes CIS 4.2.6 to fail)
+if grep -q "protectKernelDefaults:" "$KUBELET_CONFIG"; then
+    sudo sed -i 's/protectKernelDefaults: true/protectKernelDefaults: false/' "$KUBELET_CONFIG"
+fi
+
+# Restart kubelet to apply changes
+sudo systemctl restart kubelet
+
+echo "✓ Kubelet misconfiguration introduced on node01"
+echo "  - protectKernelDefaults not set to true (CIS 4.2.6)"
+ENDSSH
 
 echo ""
 echo "✓ Environment ready!"
 echo ""
 echo "Important paths:"
-echo "  API Server manifest: /var/lib/rancher/rke2/agent/pod-manifests/kube-apiserver.yaml (on controlplane)"
-echo "  Kubelet config: /etc/rancher/rke2/config.yaml (on node01)"
+echo "  API Server manifest: /etc/kubernetes/manifests/kube-apiserver.yaml (on controlplane)"
+echo "  Kubelet config: /var/lib/kubelet/config.yaml (on node01)"
 echo "  Output directory: /opt/course/03/ (on controlplane)"
 echo ""
 echo "Run kube-bench:"
-echo "  On controlplane:   ssh controlplane 'kube-bench run --targets=master --config-dir /etc/kube-bench/cfg'"
-echo "  On node01: ssh node01 'kube-bench run --targets=node --config-dir /etc/kube-bench/cfg'"
+echo "  On controlplane: kube-bench run --targets=master"
+echo "  On node01:       ssh node01 'kube-bench run --targets=node'"
