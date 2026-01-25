@@ -48,11 +48,45 @@ if [ -n "$RULE_FILE" ]; then
         PASS=false
     fi
 
-    # Check output format
-    if grep -q "user=" "$RULE_FILE" && grep -q "container=" "$RULE_FILE"; then
-        echo -e "${GREEN}✓ Output format includes user and container${NC}"
+    # Check output format (question requires: user, command, container, pod name, namespace)
+    OUTPUT_OK=true
+
+    if grep -qi "user=" "$RULE_FILE" || grep -qi "%user" "$RULE_FILE"; then
+        echo -e "${GREEN}✓ Output includes user${NC}"
     else
-        echo -e "${RED}✗ Output should include user and container info${NC}"
+        echo -e "${RED}✗ Output should include user${NC}"
+        OUTPUT_OK=false
+    fi
+
+    if grep -qi "command\|proc.cmdline\|proc.name" "$RULE_FILE"; then
+        echo -e "${GREEN}✓ Output includes command${NC}"
+    else
+        echo -e "${RED}✗ Output should include command${NC}"
+        OUTPUT_OK=false
+    fi
+
+    if grep -qi "container=" "$RULE_FILE" || grep -qi "container.name\|container.id" "$RULE_FILE"; then
+        echo -e "${GREEN}✓ Output includes container${NC}"
+    else
+        echo -e "${RED}✗ Output should include container info${NC}"
+        OUTPUT_OK=false
+    fi
+
+    if grep -qi "k8s.pod.name\|pod=" "$RULE_FILE"; then
+        echo -e "${GREEN}✓ Output includes pod name${NC}"
+    else
+        echo -e "${RED}✗ Output should include pod name (k8s.pod.name)${NC}"
+        OUTPUT_OK=false
+    fi
+
+    if grep -qi "k8s.ns.name\|namespace=" "$RULE_FILE"; then
+        echo -e "${GREEN}✓ Output includes namespace${NC}"
+    else
+        echo -e "${RED}✗ Output should include namespace (k8s.ns.name)${NC}"
+        OUTPUT_OK=false
+    fi
+
+    if [ "$OUTPUT_OK" == "false" ]; then
         PASS=false
     fi
 fi

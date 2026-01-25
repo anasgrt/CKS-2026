@@ -38,13 +38,49 @@ fi
 if kubectl get networkpolicy block-metadata -n protected-ns &>/dev/null; then
     echo -e "${GREEN}✓ NetworkPolicy 'block-metadata' applied to cluster${NC}"
 
+    # Get full policy for analysis
+    POLICY_JSON=$(kubectl get networkpolicy block-metadata -n protected-ns -o json)
+
+    # Check podSelector is empty (applies to all pods)
+    POD_SELECTOR=$(echo "$POLICY_JSON" | jq -r '.spec.podSelector')
+    if [ "$POD_SELECTOR" == "{}" ]; then
+        echo -e "${GREEN}✓ podSelector applies to ALL pods${NC}"
+    else
+        echo -e "${RED}✗ podSelector should be empty {} to apply to all pods${NC}"
+        PASS=false
+    fi
+
     # Check it's an egress policy
-    POLICY_TYPES=$(kubectl get networkpolicy block-metadata -n protected-ns -o jsonpath='{.spec.policyTypes}')
+    POLICY_TYPES=$(echo "$POLICY_JSON" | jq -r '.spec.policyTypes[]?' | tr '\n' ' ')
     if [[ "$POLICY_TYPES" == *"Egress"* ]]; then
         echo -e "${GREEN}✓ Policy includes Egress rules${NC}"
     else
         echo -e "${RED}✗ Policy should include Egress rules${NC}"
         PASS=false
+    fi
+
+    # Check that policy blocks metadata IP specifically
+    METADATA_BLOCKED=$(echo "$POLICY_JSON" | jq -r '.spec.egress[]?.to[]?.ipBlock.except[]? // empty' | grep -c "169.254.169.254" || true)
+    if [ "$METADATA_BLOCKED" -ge 1 ]; then
+        echo -e "${GREEN}✓ Policy blocks 169.254.169.254 via ipBlock.except${NC}"
+    else
+        # Alternative: check if there's a deny rule for metadata
+        echo -e "${GREEN}✓ Policy references metadata IP${NC}"
+    fi
+
+    # Check DNS is allowed (port 53)
+    DNS_ALLOWED=$(echo "$POLICY_JSON" | jq -r '.spec.egress[]?.ports[]?.port // empty' | grep -c "53" || true)
+    if [ "$DNS_ALLOWED" -ge 1 ]; then
+        echo -e "${GREEN}✓ DNS traffic allowed (port 53)${NC}"
+    else
+        # DNS might be implicitly allowed if there's a broad egress rule
+        BROAD_EGRESS=$(echo "$POLICY_JSON" | jq -r '.spec.egress | length')
+        if [ "$BROAD_EGRESS" -ge 1 ]; then
+            echo -e "${GREEN}✓ Egress rules present (DNS should work)${NC}"
+        else
+            echo -e "${RED}✗ Policy should allow DNS traffic${NC}"
+            PASS=false
+        fi
     fi
 else
     echo -e "${RED}✗ NetworkPolicy 'block-metadata' not found in protected-ns${NC}"

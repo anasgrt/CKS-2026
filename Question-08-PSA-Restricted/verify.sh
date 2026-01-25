@@ -51,41 +51,56 @@ echo "Checking secure pod..."
 if kubectl get pod secure-pod -n psa-restricted &>/dev/null; then
     echo -e "${GREEN}✓ Pod 'secure-pod' exists${NC}"
 
-    # Check runAsNonRoot
-    RUN_AS_NON_ROOT=$(kubectl get pod secure-pod -n psa-restricted -o jsonpath='{.spec.containers[0].securityContext.runAsNonRoot}')
-    if [ "$RUN_AS_NON_ROOT" == "true" ]; then
-        echo -e "${GREEN}✓ runAsNonRoot: true${NC}"
+    # Check image (question requires nginx:alpine)
+    IMAGE=$(kubectl get pod secure-pod -n psa-restricted -o jsonpath='{.spec.containers[0].image}')
+    if [[ "$IMAGE" == *"nginx"* ]] && [[ "$IMAGE" == *"alpine"* ]]; then
+        echo -e "${GREEN}✓ Uses nginx:alpine image${NC}"
     else
-        echo -e "${RED}✗ Container should have runAsNonRoot: true${NC}"
+        echo -e "${RED}✗ Should use nginx:alpine image (as per question)${NC}"
         PASS=false
     fi
 
-    # Check capabilities dropped
+    # Check runAsNonRoot (PSA Restricted requirement - can be at pod or container level)
+    POD_RUN_AS_NON_ROOT=$(kubectl get pod secure-pod -n psa-restricted -o jsonpath='{.spec.securityContext.runAsNonRoot}')
+    CONTAINER_RUN_AS_NON_ROOT=$(kubectl get pod secure-pod -n psa-restricted -o jsonpath='{.spec.containers[0].securityContext.runAsNonRoot}')
+    if [ "$POD_RUN_AS_NON_ROOT" == "true" ] || [ "$CONTAINER_RUN_AS_NON_ROOT" == "true" ]; then
+        echo -e "${GREEN}✓ runAsNonRoot: true${NC}"
+    else
+        echo -e "${RED}✗ Must have runAsNonRoot: true (PSA Restricted requirement)${NC}"
+        PASS=false
+    fi
+
+    # Check capabilities dropped (PSA Restricted requirement)
     DROP_CAPS=$(kubectl get pod secure-pod -n psa-restricted -o jsonpath='{.spec.containers[0].securityContext.capabilities.drop}')
     if [[ "$DROP_CAPS" == *"ALL"* ]]; then
         echo -e "${GREEN}✓ All capabilities dropped${NC}"
     else
-        echo -e "${RED}✗ Should drop ALL capabilities${NC}"
+        echo -e "${RED}✗ Must drop ALL capabilities (PSA Restricted requirement)${NC}"
         PASS=false
     fi
 
-    # Check readOnlyRootFilesystem
-    READ_ONLY=$(kubectl get pod secure-pod -n psa-restricted -o jsonpath='{.spec.containers[0].securityContext.readOnlyRootFilesystem}')
-    if [ "$READ_ONLY" == "true" ]; then
-        echo -e "${GREEN}✓ readOnlyRootFilesystem: true${NC}"
+    # Check seccompProfile (PSA Restricted requirement - MUST be RuntimeDefault or Localhost)
+    POD_SECCOMP=$(kubectl get pod secure-pod -n psa-restricted -o jsonpath='{.spec.securityContext.seccompProfile.type}')
+    CONTAINER_SECCOMP=$(kubectl get pod secure-pod -n psa-restricted -o jsonpath='{.spec.containers[0].securityContext.seccompProfile.type}')
+    if [ "$POD_SECCOMP" == "RuntimeDefault" ] || [ "$POD_SECCOMP" == "Localhost" ] || \
+       [ "$CONTAINER_SECCOMP" == "RuntimeDefault" ] || [ "$CONTAINER_SECCOMP" == "Localhost" ]; then
+        echo -e "${GREEN}✓ seccompProfile: RuntimeDefault or Localhost${NC}"
     else
-        echo -e "${RED}✗ Should have readOnlyRootFilesystem: true${NC}"
+        echo -e "${RED}✗ Must have seccompProfile type RuntimeDefault or Localhost (PSA Restricted requirement)${NC}"
         PASS=false
     fi
 
-    # Check allowPrivilegeEscalation
+    # Check allowPrivilegeEscalation (PSA Restricted requirement)
     ALLOW_PRIV=$(kubectl get pod secure-pod -n psa-restricted -o jsonpath='{.spec.containers[0].securityContext.allowPrivilegeEscalation}')
     if [ "$ALLOW_PRIV" == "false" ]; then
         echo -e "${GREEN}✓ allowPrivilegeEscalation: false${NC}"
     else
-        echo -e "${RED}✗ Should have allowPrivilegeEscalation: false${NC}"
+        echo -e "${RED}✗ Must have allowPrivilegeEscalation: false (PSA Restricted requirement)${NC}"
         PASS=false
     fi
+
+    # Note: readOnlyRootFilesystem is NOT a PSA Restricted requirement per K8s docs
+    # It's a security best practice but not enforced by PSA
 else
     echo -e "${RED}✗ Pod 'secure-pod' not found${NC}"
     PASS=false

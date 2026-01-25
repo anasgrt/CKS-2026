@@ -56,7 +56,27 @@ else
     PASS=false
 fi
 
+# Check kubesec-fixed.json (question requirement)
+echo ""
+echo "Checking fixed deployment scan..."
+if [ -f "/opt/course/12/kubesec-fixed.json" ]; then
+    echo -e "${GREEN}✓ kubesec-fixed.json saved${NC}"
+
+    # Check score >= 8 (question requirement)
+    SCORE=$(jq -r '.[0].score // 0' /opt/course/12/kubesec-fixed.json 2>/dev/null)
+    if [ -n "$SCORE" ] && [ "$SCORE" -ge 8 ] 2>/dev/null; then
+        echo -e "${GREEN}✓ Kubesec score is $SCORE (>= 8 required)${NC}"
+    else
+        echo -e "${RED}✗ Kubesec score should be >= 8 (current: $SCORE)${NC}"
+        PASS=false
+    fi
+else
+    echo -e "${RED}✗ kubesec-fixed.json not found at /opt/course/12/kubesec-fixed.json${NC}"
+    PASS=false
+fi
+
 # Check deployment is running
+echo ""
 if kubectl get deployment web-app -n kubesec-ns &>/dev/null; then
     echo -e "${GREEN}✓ Deployment 'web-app' exists in cluster${NC}"
 else

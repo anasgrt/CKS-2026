@@ -48,6 +48,15 @@ if kubectl get role deployment-manager -n cicd-ns &>/dev/null; then
         PASS=false
     fi
 
+    # Check pods/log permissions (read access - question requirement)
+    PODS_LOG_VERBS=$(kubectl get role deployment-manager -n cicd-ns -o json | jq -r '.rules[] | select(.resources | index("pods/log")) | .verbs[]' 2>/dev/null | sort | tr '\n' ' ')
+    if echo "$PODS_LOG_VERBS" | grep -q "get"; then
+        echo -e "${GREEN}✓ pods/log: GET permission${NC}"
+    else
+        echo -e "${RED}✗ pods/log should have GET permission${NC}"
+        PASS=false
+    fi
+
     # Check services permissions (read only)
     SVC_VERBS=$(kubectl get role deployment-manager -n cicd-ns -o json | jq -r '.rules[] | select(.resources | index("services")) | .verbs[]' 2>/dev/null | sort | tr '\n' ' ')
     if echo "$SVC_VERBS" | grep -q "get" && echo "$SVC_VERBS" | grep -q "list"; then

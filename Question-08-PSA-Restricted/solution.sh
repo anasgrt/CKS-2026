@@ -50,7 +50,7 @@ spec:
       type: RuntimeDefault
   containers:
   - name: app
-    image: nginx
+    image: nginx:alpine
     securityContext:
       allowPrivilegeEscalation: false
       readOnlyRootFilesystem: true

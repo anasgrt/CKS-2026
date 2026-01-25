@@ -118,6 +118,22 @@ else
     PASS=false
 fi
 
+# Check NO configmaps access (question requirement)
+if ! kubectl auth can-i get configmaps --as=system:serviceaccount:monitoring:monitor-sa 2>/dev/null; then
+    echo -e "${GREEN}✓ ServiceAccount cannot access configmaps${NC}"
+else
+    echo -e "${RED}✗ ServiceAccount should NOT have access to configmaps${NC}"
+    PASS=false
+fi
+
+# Check NO pods/exec access (question requirement)
+if ! kubectl auth can-i create pods/exec --as=system:serviceaccount:monitoring:monitor-sa 2>/dev/null; then
+    echo -e "${GREEN}✓ ServiceAccount cannot exec into pods${NC}"
+else
+    echo -e "${RED}✗ ServiceAccount should NOT be able to exec into pods${NC}"
+    PASS=false
+fi
+
 # Check manifest files
 echo ""
 echo "Checking manifest files..."
