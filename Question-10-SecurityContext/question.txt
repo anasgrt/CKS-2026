@@ -8,39 +8,20 @@ Apply defense-in-depth security controls.
 Task:
 1. Create namespace 'hardened-ns' if it doesn't exist
 
-2. Create a pod named 'hardened-pod' in namespace 'hardened-ns' with these settings:
+2. Create a pod named 'hardened-pod' in namespace 'hardened-ns' with:
+   - Image: nginx:alpine
+   - Run as non-root user
+   - Read-only root filesystem
+   - Drop all capabilities (add only what's needed)
+   - Privilege escalation disabled
+   - RuntimeDefault seccomp profile
+   - No host namespace access (hostNetwork, hostPID, hostIPC)
+   - No hostPath volumes
 
-   Pod-level securityContext:
-   - runAsNonRoot: true
-   - runAsUser: 1000
-   - runAsGroup: 3000
-   - fsGroup: 2000
-   - seccompProfile:
-       type: RuntimeDefault
+3. Ensure the pod can run nginx successfully with the hardened settings
+   (consider what writable directories nginx requires)
 
-   Container-level securityContext (for each container):
-   - allowPrivilegeEscalation: false
-   - readOnlyRootFilesystem: true
-   - capabilities:
-       drop: ["ALL"]
-       add: ["NET_BIND_SERVICE"]  # only if needed for binding to port 80
-   - privileged: false
-
-3. Use image: nginx:alpine
-
-4. Since readOnlyRootFilesystem is true, nginx needs writable directories.
-   Add emptyDir volumes mounted at:
-   - /var/cache/nginx
-   - /var/run
-   - /tmp
-
-5. Ensure the pod does NOT have:
-   - hostNetwork: true
-   - hostPID: true
-   - hostIPC: true
-   - Any hostPath volumes
-
-6. Verify the pod starts successfully and nginx is running
+4. Verify the pod starts successfully and nginx is running
 
 Save your pod YAML to: /opt/course/10/pod.yaml
 Save pod status and events to: /opt/course/10/pod-status.txt

@@ -58,14 +58,73 @@ else
 fi
 
 # Check recommendations file
+echo ""
+echo "Checking recommendations..."
 if [ -f "/opt/course/11/recommendations.txt" ]; then
     echo -e "${GREEN}✓ recommendations.txt exists${NC}"
+
+    # Check for nginx recommendation
+    if grep -qi "nginx" /opt/course/11/recommendations.txt; then
+        echo -e "${GREEN}✓ Contains nginx recommendation${NC}"
+    else
+        echo -e "${RED}✗ Missing nginx recommendation${NC}"
+        PASS=false
+    fi
+
+    # Check for python recommendation
+    if grep -qi "python" /opt/course/11/recommendations.txt; then
+        echo -e "${GREEN}✓ Contains python recommendation${NC}"
+    else
+        echo -e "${RED}✗ Missing python recommendation${NC}"
+        PASS=false
+    fi
+
+    # Check for vulnerability counts
+    if grep -qiE "(high|critical|vulnerabilit|count|total)" /opt/course/11/recommendations.txt; then
+        echo -e "${GREEN}✓ Contains vulnerability analysis${NC}"
+    else
+        echo -e "${RED}✗ Missing vulnerability counts/analysis${NC}"
+        PASS=false
+    fi
+
+    # Check for reasoning (alpine usually recommended)
+    if grep -qi "alpine\|fewer\|safer\|less\|recommend" /opt/course/11/recommendations.txt; then
+        echo -e "${GREEN}✓ Contains reasoning for recommendations${NC}"
+    else
+        echo -e "${RED}✗ Should explain WHY images are recommended${NC}"
+        PASS=false
+    fi
 else
     echo -e "${RED}✗ recommendations.txt not found${NC}"
     PASS=false
 fi
 
-# Check updated deployment
+# Check if deployment was updated with safer images
+echo ""
+echo "Checking deployment update..."
+if kubectl get deployment web-app -n trivy-test &>/dev/null; then
+    NGINX_IMAGE=$(kubectl get deployment web-app -n trivy-test -o jsonpath='{.spec.template.spec.containers[?(@.name=="nginx")].image}')
+    PYTHON_IMAGE=$(kubectl get deployment web-app -n trivy-test -o jsonpath='{.spec.template.spec.containers[?(@.name=="python")].image}')
+
+    if [[ "$NGINX_IMAGE" == *"alpine"* ]]; then
+        echo -e "${GREEN}✓ nginx updated to alpine variant${NC}"
+    else
+        echo -e "${RED}✗ nginx should be updated to alpine variant (safer)${NC}"
+        PASS=false
+    fi
+
+    if [[ "$PYTHON_IMAGE" == *"alpine"* ]] || [[ "$PYTHON_IMAGE" == *"3.12"* ]]; then
+        echo -e "${GREEN}✓ python updated to newer/alpine variant${NC}"
+    else
+        echo -e "${RED}✗ python should be updated to newer/alpine variant (safer)${NC}"
+        PASS=false
+    fi
+else
+    echo -e "${RED}✗ Deployment 'web-app' not found in trivy-test namespace${NC}"
+    PASS=false
+fi
+
+# Check updated deployment YAML saved
 if [ -f "/opt/course/11/updated-deployment.yaml" ]; then
     echo -e "${GREEN}✓ updated-deployment.yaml saved${NC}"
 else
@@ -73,19 +132,11 @@ else
     PASS=false
 fi
 
-# Check deployment uses updated images (if cluster access)
-if kubectl get deployment web-app -n trivy-test &>/dev/null; then
-    NGINX_IMAGE=$(kubectl get deployment web-app -n trivy-test -o jsonpath='{.spec.template.spec.containers[?(@.name=="nginx")].image}')
-    if [[ "$NGINX_IMAGE" == *"alpine"* ]]; then
-        echo -e "${GREEN}✓ Deployment uses alpine-based nginx image${NC}"
-    else
-        echo -e "${RED}✗ Deployment should use safer alpine-based image${NC}"
-        PASS=false
-    fi
-fi
-
+echo ""
 if $PASS; then
+    echo -e "${GREEN}All checks passed!${NC}"
     exit 0
 else
+    echo -e "${RED}Some checks failed.${NC}"
     exit 1
 fi

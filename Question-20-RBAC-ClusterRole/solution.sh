@@ -1,103 +1,50 @@
 #!/bin/bash
 # Solution for Question 20 - RBAC ClusterRole
 
-echo "Solution: Create Cluster-wide RBAC for monitoring"
+echo "=== Quick Solution (kubectl create commands) ==="
 echo ""
-echo "Step 1: Create ServiceAccount"
+echo "# 1. Create ServiceAccount"
+echo "kubectl create sa monitor-sa -n monitoring"
+echo ""
+echo "# 2. Create ClusterRole (read-only pods/nodes/namespaces, get pods/log and events)"
+echo "kubectl create clusterrole cluster-monitor \\"
+echo "  --verb=get,list,watch --resource=pods,nodes,namespaces \\"
+echo "  --verb=get --resource=pods/log,endpoints,services \\"
+echo "  --verb=get,list --resource=events"
+echo ""
+echo "# 3. Create ClusterRoleBinding"
+echo "kubectl create clusterrolebinding cluster-monitor-binding \\"
+echo "  --clusterrole=cluster-monitor --serviceaccount=monitoring:monitor-sa"
+echo ""
+echo "# 4. Test permissions"
+echo "kubectl auth can-i list pods -A --as=system:serviceaccount:monitoring:monitor-sa"
+echo "kubectl auth can-i get secrets -A --as=system:serviceaccount:monitoring:monitor-sa  # should be NO"
+echo ""
+echo "# 5. Save files"
+echo "kubectl get sa monitor-sa -n monitoring -o yaml > /opt/course/20/sa.yaml"
+echo "kubectl get clusterrole cluster-monitor -o yaml > /opt/course/20/clusterrole.yaml"
+echo "kubectl get clusterrolebinding cluster-monitor-binding -o yaml > /opt/course/20/clusterrolebinding.yaml"
 echo ""
 
+echo "=== If kubectl create doesn't work, use YAML ==="
 cat << 'EOF'
-cat > /opt/course/20/sa.yaml << 'YAML'
-apiVersion: v1
-kind: ServiceAccount
-metadata:
-  name: monitor-sa
-  namespace: monitoring
-YAML
-
-kubectl apply -f /opt/course/20/sa.yaml
-EOF
-
-echo ""
-echo "Step 2: Create ClusterRole"
-echo ""
-
-cat << 'EOF'
-cat > /opt/course/20/clusterrole.yaml << 'YAML'
+cat <<YAML | kubectl apply -f -
 apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRole
 metadata:
   name: cluster-monitor
 rules:
-  - apiGroups: [""]
-    resources: ["pods"]
-    verbs: ["get", "list", "watch"]
-  - apiGroups: [""]
-    resources: ["nodes"]
-    verbs: ["get", "list", "watch"]
-  - apiGroups: [""]
-    resources: ["namespaces"]
-    verbs: ["get", "list", "watch"]
-  - apiGroups: [""]
-    resources: ["pods/log"]
-    verbs: ["get"]
-  - apiGroups: [""]
-    resources: ["events"]
-    verbs: ["get", "list"]
-  - apiGroups: [""]
-    resources: ["endpoints", "services"]
-    verbs: ["get"]
+- apiGroups: [""]
+  resources: ["pods", "nodes", "namespaces"]
+  verbs: ["get", "list", "watch"]
+- apiGroups: [""]
+  resources: ["pods/log", "endpoints", "services"]
+  verbs: ["get"]
+- apiGroups: [""]
+  resources: ["events"]
+  verbs: ["get", "list"]
 YAML
-
-kubectl apply -f /opt/course/20/clusterrole.yaml
 EOF
 
 echo ""
-echo "Step 3: Create ClusterRoleBinding"
-echo ""
-
-cat << 'EOF'
-cat > /opt/course/20/clusterrolebinding.yaml << 'YAML'
-apiVersion: rbac.authorization.k8s.io/v1
-kind: ClusterRoleBinding
-metadata:
-  name: cluster-monitor-binding
-subjects:
-  - kind: ServiceAccount
-    name: monitor-sa
-    namespace: monitoring
-roleRef:
-  kind: ClusterRole
-  name: cluster-monitor
-  apiGroup: rbac.authorization.k8s.io
-YAML
-
-kubectl apply -f /opt/course/20/clusterrolebinding.yaml
-EOF
-
-echo ""
-echo "Step 4: Verify access"
-echo ""
-
-cat << 'EOF'
-# Test with kubectl auth can-i
-kubectl auth can-i list pods --all-namespaces --as=system:serviceaccount:monitoring:monitor-sa
-
-# Or run a pod with the ServiceAccount and test
-kubectl run test-access --image=bitnami/kubectl --rm -it --restart=Never \
-  --serviceaccount=monitor-sa -n monitoring -- kubectl get pods -A
-EOF
-
-echo ""
-echo "Quick command alternatives:"
-echo ""
-echo "kubectl create sa monitor-sa -n monitoring"
-echo "kubectl create clusterrole cluster-monitor --verb=get,list,watch --resource=pods,nodes --verb=get,list --resource=namespaces --verb=get --resource=pods/log"
-echo "kubectl create clusterrolebinding cluster-monitor-binding --clusterrole=cluster-monitor --serviceaccount=monitoring:monitor-sa"
-echo ""
-echo "Key Points:"
-echo "- ClusterRole is cluster-scoped (not namespaced)"
-echo "- ClusterRoleBinding grants cluster-wide access"
-echo "- pods/log is a subresource - requires separate rule"
-echo "- Use 'kubectl auth can-i' to test permissions"
-echo "- Follow least privilege principle"
+echo "Key: ClusterRole = cluster-wide, ClusterRoleBinding grants access across ALL namespaces."

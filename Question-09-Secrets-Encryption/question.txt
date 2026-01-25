@@ -6,45 +6,20 @@ Secrets stored in etcd should be encrypted at rest to protect sensitive data.
 Configure encryption and verify it's working.
 
 Task:
-1. Create an EncryptionConfiguration at /etc/kubernetes/encryption-config.yaml:
+1. Create an EncryptionConfiguration at /etc/kubernetes/encryption-config.yaml
+   that encrypts secrets using aescbc encryption
 
-   apiVersion: apiserver.config.k8s.io/v1
-   kind: EncryptionConfiguration
-   resources:
-     - resources:
-         - secrets
-       providers:
-         - aescbc:
-             keys:
-               - name: key1
-                 secret: <base64-encoded-32-byte-key>
-         - identity: {}  # fallback for reading unencrypted secrets
+2. Generate an appropriate encryption key
 
-2. Generate the encryption key:
-   head -c 32 /dev/urandom | base64
+3. Configure the kube-apiserver to use the encryption configuration
 
-3. Configure the kube-apiserver to use encryption:
-   Add flag: --encryption-provider-config=/etc/kubernetes/encryption-config.yaml
+4. Wait for API server to restart
 
-   Add volume and volumeMount for the encryption config file
+5. Create namespace 'secrets-ns' and a test secret to verify encryption
 
-4. Wait for API server to restart (kubelet will restart it automatically)
+6. Verify the secret is encrypted in etcd (not stored in plaintext)
 
-5. Create namespace 'secrets-ns' and a secret to test:
-   kubectl create secret generic test-secret -n secrets-ns \
-     --from-literal=password=supersecret
-
-6. Verify the secret is encrypted in etcd:
-   ETCDCTL_API=3 etcdctl get /registry/secrets/secrets-ns/test-secret \
-     --cacert=/etc/kubernetes/pki/etcd/ca.crt \
-     --cert=/etc/kubernetes/pki/etcd/server.crt \
-     --key=/etc/kubernetes/pki/etcd/server.key | hexdump -C
-
-   The output should show encrypted data (not plain 'supersecret')
-
-7. Re-encrypt all existing secrets:
-   kubectl get secrets --all-namespaces -o json | \
-     kubectl replace -f -
+7. Re-encrypt all existing secrets in the cluster
 
 Save your EncryptionConfiguration to: /opt/course/09/encryption-config.yaml
 Save the etcd verification output to: /opt/course/09/verification.txt

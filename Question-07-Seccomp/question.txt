@@ -10,26 +10,14 @@ Task:
 
 2. Create a pod named 'runtime-default-pod' in namespace 'seccomp-ns':
    - Use image: nginx:alpine
-   - Apply RuntimeDefault seccomp profile at container level:
-     securityContext:
-       seccompProfile:
-         type: RuntimeDefault
+   - Apply the RuntimeDefault seccomp profile
 
 3. A custom seccomp profile exists at /var/lib/kubelet/seccomp/audit-log.json
    on the worker nodes. Create a pod named 'custom-seccomp-pod' that uses it:
    - Use image: nginx:alpine
-   - Apply Localhost seccomp profile:
-     securityContext:
-       seccompProfile:
-         type: Localhost
-         localhostProfile: audit-log.json
+   - Apply the custom Localhost seccomp profile
 
-4. Verify seccomp is applied by checking pod description:
-   kubectl describe pod runtime-default-pod -n seccomp-ns | grep -i seccomp
-   kubectl describe pod custom-seccomp-pod -n seccomp-ns | grep -i seccomp
-
-5. Test that restricted syscalls are blocked in the custom profile pod
-   (the audit-log.json logs syscall usage for security analysis)
+4. Verify seccomp profiles are correctly applied to both pods
 
 Save your pod YAMLs to:
 - /opt/course/07/runtime-default-pod.yaml

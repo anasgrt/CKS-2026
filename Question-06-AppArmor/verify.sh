@@ -15,8 +15,17 @@ if kubectl get pod secured-pod -n apparmor-ns &>/dev/null; then
     echo -e "${GREEN}✓ Pod 'secured-pod' exists${NC}"
 
     # Check for AppArmor in securityContext (GA method K8s 1.30+)
+    # Check pod-level first, then container-level
+    POD_PROFILE=$(kubectl get pod secured-pod -n apparmor-ns -o jsonpath='{.spec.securityContext.appArmorProfile.localhostProfile}' 2>/dev/null)
+    POD_TYPE=$(kubectl get pod secured-pod -n apparmor-ns -o jsonpath='{.spec.securityContext.appArmorProfile.type}' 2>/dev/null)
     CONTAINER_PROFILE=$(kubectl get pod secured-pod -n apparmor-ns -o jsonpath='{.spec.containers[0].securityContext.appArmorProfile.localhostProfile}' 2>/dev/null)
     CONTAINER_TYPE=$(kubectl get pod secured-pod -n apparmor-ns -o jsonpath='{.spec.containers[0].securityContext.appArmorProfile.type}' 2>/dev/null)
+
+    # Use pod-level if set, otherwise container-level
+    if [ -n "$POD_PROFILE" ]; then
+        CONTAINER_PROFILE="$POD_PROFILE"
+        CONTAINER_TYPE="$POD_TYPE"
+    fi
 
     if [ "$CONTAINER_PROFILE" == "k8s-deny-write" ] && [ "$CONTAINER_TYPE" == "Localhost" ]; then
         echo -e "${GREEN}✓ AppArmor securityContext configured correctly${NC}"
@@ -31,10 +40,10 @@ if kubectl get pod secured-pod -n apparmor-ns &>/dev/null; then
 
     # Check image
     IMAGE=$(kubectl get pod secured-pod -n apparmor-ns -o jsonpath='{.spec.containers[0].image}')
-    if [[ "$IMAGE" == *"nginx"* ]]; then
-        echo -e "${GREEN}✓ Using nginx image${NC}"
+    if [[ "$IMAGE" == *"busybox"* ]]; then
+        echo -e "${GREEN}✓ Using busybox image${NC}"
     else
-        echo -e "${RED}✗ Should use nginx image${NC}"
+        echo -e "${RED}✗ Should use busybox image${NC}"
         PASS=false
     fi
 

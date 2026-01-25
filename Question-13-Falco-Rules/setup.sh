@@ -3,10 +3,10 @@
 
 set -e
 
-echo "Setting up Falco on node-01..."
+echo "Setting up Falco on key-worker..."
 
-# Install Falco on node-01
-ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null node-01 'bash -s' << 'ENDSSH'
+# Install Falco on key-worker
+ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -o LogLevel=ERROR key-worker 'bash -s' << 'ENDSSH'
 set -e
 
 # Check if Falco is already installed
@@ -21,7 +21,7 @@ if ! command -v falco &> /dev/null; then
     curl -fsSL https://falco.org/repo/falcosecurity-packages.asc | \
       sudo gpg --batch --yes --dearmor -o /usr/share/keyrings/falco-archive-keyring.gpg
 
-    sudo cat > /etc/apt/sources.list.d/falcosecurity.list << 'EOF'
+    sudo tee /etc/apt/sources.list.d/falcosecurity.list > /dev/null << 'EOF'
 deb [signed-by=/usr/share/keyrings/falco-archive-keyring.gpg] https://download.falco.org/packages/deb stable main
 EOF
 
@@ -83,8 +83,8 @@ echo ""
 echo "✓ Environment ready!"
 echo "  Namespace: falco-ns"
 echo "  Test pod: test-pod"
-echo "  Falco running on node-01"
+echo "  Falco running on key-worker"
 echo ""
 echo "Check Falco logs with:"
-echo "  ssh node-01 'sudo journalctl -u falco-modern-bpf -f'"
-echo "  ssh node-01 'sudo journalctl -u falco-modern-bpf | tail -20'"
+echo "  ssh key-worker 'sudo journalctl -u falco-modern-bpf -f'"
+echo "  ssh key-worker 'sudo journalctl -u falco-modern-bpf | tail -20'"

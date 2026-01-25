@@ -1,0 +1,55 @@
+# Claude AI
+.Claude/
+
+# macOS
+.DS_Store
+.AppleDouble
+.LSOverride
+._*
+
+# Editor directories and files
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
+
+# Temporary files
+*.tmp
+*.temp
+*.bak
+
+# Output directories (created during exercises)
+/opt/course/
+
+# Kubernetes config files with sensitive data
+kubeconfig
+*.kubeconfig
+*-kubeconfig.yaml
+
+# TLS certificates and keys (generated during exercises)
+*.key
+*.crt
+*.pem
+*.csr
+
+# Downloaded binaries and checksums
+kubectl.sha512
+kubelet.sha512
+
+# Logs
+*.log
+
+# Trivy cache
+.trivy/
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+.Python
+env/
+venv/
+
+# Node
+node_modules/

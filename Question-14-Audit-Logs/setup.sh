@@ -4,16 +4,16 @@
 set -e
 
 # Create namespace
-kubectl create namespace audit-ns --dry-run=client -o yaml | kubectl apply -f -
+kubectl create namespace audit-test --dry-run=client -o yaml | kubectl apply -f -
 
 # Create output directory
 mkdir -p /opt/course/14
 
 echo "Environment ready!"
-echo "Namespace: audit-ns"
+echo "Namespace: audit-test"
 echo ""
 echo "Important paths:"
-echo "  API server manifest: /etc/kubernetes/manifests/kube-apiserver.yaml"
+echo "  API server manifest: /var/lib/rancher/rke2/agent/pod-manifests/kube-apiserver.yaml"
 echo "  Audit policy: /etc/kubernetes/audit/policy.yaml"
 echo "  Audit logs: /var/log/kubernetes/audit/"
 echo ""

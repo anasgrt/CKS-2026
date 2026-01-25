@@ -9,22 +9,15 @@ Task:
 1. Create namespace 'isolated-ns' if it doesn't exist
 
 2. Create a NetworkPolicy named 'default-deny-all' in namespace 'isolated-ns' that:
-   - Applies to ALL pods in the namespace (use empty podSelector: {})
+   - Applies to ALL pods in the namespace
    - Denies ALL ingress traffic by default
    - Denies ALL egress traffic by default
 
-3. The NetworkPolicy should have:
-   - policyTypes: ["Ingress", "Egress"]
-   - Empty ingress: [] and egress: [] arrays (deny all)
-
-4. Create a test pod in the namespace and verify it cannot:
+3. Create a test pod name it "test-pod" in the namespace and verify it cannot:
    - Receive traffic from other pods
    - Send traffic to other pods or external services
 
-   Test with: kubectl exec -n isolated-ns <pod> -- curl <any-service>
-   This should timeout or fail
-
-5. Document what network traffic is blocked by this policy
+4. Document what network traffic is blocked by this policy
 
 Save your NetworkPolicy YAML to: /opt/course/01/netpol.yaml
 Save test output showing blocked traffic to: /opt/course/01/test-output.txt

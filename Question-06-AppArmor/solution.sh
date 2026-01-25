@@ -8,11 +8,11 @@ echo ""
 
 cat << 'EOF'
 # SSH to worker node and check profile
-ssh node-01
+ssh key-worker
 aa-status | grep k8s-deny-write
 
 # If not loaded, load it:
-sudo apparmor_parser -q /etc/apparmor.d/k8s-deny-write
+sudo apparmor_parser -r /etc/apparmor.d/k8s-deny-write
 EOF
 
 echo ""
@@ -29,13 +29,14 @@ metadata:
   name: secured-pod
   namespace: apparmor-ns
 spec:
+  securityContext:
+    appArmorProfile:
+      type: Localhost
+      localhostProfile: k8s-deny-write
   containers:
-  - name: nginx
-    image: nginx:alpine
-    securityContext:
-      appArmorProfile:
-        type: Localhost
-        localhostProfile: k8s-deny-write
+  - name: secured-pod
+    image: busybox:1.36
+    command: ["sh", "-c", "echo 'AppArmor secured!' && sleep 1h"]
 YAML
 
 kubectl apply -f /opt/course/06/pod.yaml
@@ -49,13 +50,13 @@ cat << 'EOF'
 # Wait for pod to be ready
 kubectl wait --for=condition=Ready pod/secured-pod -n apparmor-ns --timeout=30s
 
-# Test that write is denied
-kubectl exec secured-pod -n apparmor-ns -- touch /test-file 2>&1 | tee /opt/course/06/apparmor-test.txt
+# Test that write is denied (use /tmp which is covered by deny rules)
+kubectl exec secured-pod -n apparmor-ns -- touch /tmp/test-file 2>&1 | tee /opt/course/06/apparmor-test.txt
 
-# Should see "Permission denied" or "Read-only file system"
+# Should see "Permission denied"
 
 # Verify AppArmor profile is applied
-kubectl get pod secured-pod -n apparmor-ns -o jsonpath='{.spec.containers[0].securityContext.appArmorProfile}'
+kubectl get pod secured-pod -n apparmor-ns -o jsonpath='{.spec.securityContext.appArmorProfile}'
 EOF
 
 echo ""

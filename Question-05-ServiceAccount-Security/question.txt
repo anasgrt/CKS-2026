@@ -8,8 +8,7 @@ You need to create a restricted ServiceAccount and update the deployment.
 Task:
 1. In namespace 'secure-ns', a deployment 'insecure-app' exists using default SA
 
-2. Create a new ServiceAccount named 'restricted-sa' with:
-   - automountServiceAccountToken: false
+2. Create a new ServiceAccount named 'restricted-sa' that does not automount tokens
 
 3. Create a Role named 'pod-reader' that only allows:
    - get, list on pods
@@ -21,12 +20,9 @@ Task:
 
 5. Update deployment 'insecure-app' to:
    - Use ServiceAccount 'restricted-sa'
-   - Set automountServiceAccountToken: false at pod spec level
-   - Ensure the token is not mounted even if SA has it enabled
+   - Ensure the service account token is not mounted in the pod
 
-6. Verify the pod cannot access secrets:
-   kubectl exec <pod-name> -n secure-ns -- cat /var/run/secrets/kubernetes.io/serviceaccount/token
-   This should fail or the directory should not exist
+6. Verify the pod cannot access the service account token
 
 Save your manifests to:
 - /opt/course/05/sa.yaml (ServiceAccount)

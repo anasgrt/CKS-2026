@@ -6,6 +6,38 @@ set -e
 # Create output directory
 mkdir -p /opt/course/11
 
+# Create namespace for deployment update
+kubectl create namespace trivy-test --dry-run=client -o yaml | kubectl apply -f -
+
+# Create the web-app deployment with older/vulnerable images
+cat << 'EOF' | kubectl apply -f -
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: web-app
+  namespace: trivy-test
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: web-app
+  template:
+    metadata:
+      labels:
+        app: web-app
+    spec:
+      containers:
+      - name: nginx
+        image: nginx:1.19
+        ports:
+        - containerPort: 80
+      - name: python
+        image: python:3.8
+        command: ["python", "-m", "http.server", "8000"]
+        ports:
+        - containerPort: 8000
+EOF
+
 # Install Trivy if not already installed
 if ! command -v trivy &> /dev/null; then
     echo "Installing Trivy..."
@@ -25,6 +57,8 @@ echo ""
 echo "Environment ready!"
 echo ""
 echo "Trivy is installed at: $(which trivy)"
+echo "Namespace: trivy-test"
+echo "Deployment: web-app (using nginx:1.19 and python:3.8 - older images)"
 echo ""
 echo "Basic Trivy commands:"
 echo "  trivy image <image>                    # Full scan"
