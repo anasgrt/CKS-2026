@@ -71,9 +71,6 @@ else
 fi
 ENDSSH
 
-# Create output directory
-mkdir -p /opt/course/03
-
 echo ""
 echo "Introducing security misconfigurations for the exercise..."
 
@@ -100,6 +97,10 @@ echo "✓ Security misconfigurations introduced on key-ctrl"
 echo "  - anonymous-auth=true (should be false)"
 echo "  - profiling=true (should be false)"
 echo "  - authorization-mode=RBAC (should include Node)"
+
+# Create output directory on control plane
+sudo mkdir -p /opt/course/03
+sudo chmod 777 /opt/course/03
 ENDSSH
 
 # Wait for API server to restart with new config
@@ -112,7 +113,7 @@ echo ""
 echo "Important paths:"
 echo "  API Server manifest: /var/lib/rancher/rke2/agent/pod-manifests/kube-apiserver.yaml (on key-ctrl)"
 echo "  Kubelet config: /etc/rancher/rke2/config.yaml (on key-worker)"
-echo "  Output directory: /opt/course/03/"
+echo "  Output directory: /opt/course/03/ (on key-ctrl)"
 echo ""
 echo "Run kube-bench:"
 echo "  On key-ctrl:   ssh key-ctrl 'kube-bench run --targets=master --config-dir /etc/kube-bench/cfg'"

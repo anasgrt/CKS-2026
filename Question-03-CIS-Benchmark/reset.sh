@@ -1,12 +1,9 @@
 #!/bin/bash
 # Reset Question 03 - CIS Benchmark
 
-# Clean up output directory
-rm -rf /opt/course/03
-
 echo "Restoring original API server configuration on key-ctrl..."
 
-# Restore original API server manifest from backup
+# Restore original API server manifest from backup and clean up directory
 ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -o LogLevel=ERROR key-ctrl 'bash -s' << 'ENDSSH'
 set -e
 
@@ -25,6 +22,9 @@ else
     sudo sed -i 's/--authorization-mode=RBAC$/--authorization-mode=Node,RBAC/' "$API_SERVER_MANIFEST"
     echo "✓ Security settings restored manually"
 fi
+
+# Clean up output directory on control plane
+sudo rm -rf /opt/course/03
 ENDSSH
 
 # Wait for API server to restart with restored config
