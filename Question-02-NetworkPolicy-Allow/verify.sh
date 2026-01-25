@@ -57,18 +57,12 @@ else
 
     # Check ingress from monitoring-ns namespace
     INGRESS_MONITORING=$(echo "$API_POLICY" | jq -r '
-        .spec.ingress[]? |
-        select(.from[]?.namespaceSelector.matchLabels) |
-        .from[]?.namespaceSelector.matchLabels | to_entries[] |
-        select(.value == "monitoring-ns" or .key == "kubernetes.io/metadata.name" and .value == "monitoring-ns") |
-        "found"' | head -1)
-    # Alternative check for namespace name label
-    if [ "$INGRESS_MONITORING" != "found" ]; then
-        INGRESS_MONITORING=$(echo "$API_POLICY" | jq -r '
-            .spec.ingress[]?.from[]?.namespaceSelector.matchLabels["kubernetes.io/metadata.name"] //
-            .spec.ingress[]?.from[]?.namespaceSelector.matchLabels.name //
-            empty' | grep -q "monitoring-ns" && echo "found")
-    fi
+        .spec.ingress[]?.from[]?.namespaceSelector.matchLabels // empty |
+        select(. != null) |
+        to_entries[] |
+        select(.key == "kubernetes.io/metadata.name" or .key == "name") |
+        select(.value == "monitoring-ns") |
+        "found"' 2>/dev/null | head -1)
     if [ "$INGRESS_MONITORING" == "found" ]; then
         echo -e "${GREEN}✓ Ingress allows from namespace 'monitoring-ns'${NC}"
     else
