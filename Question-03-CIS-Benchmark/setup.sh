@@ -12,7 +12,16 @@ set -e
 if ! command -v kube-bench &> /dev/null || [ ! -d /etc/kube-bench/cfg ]; then
     echo "Installing kube-bench on key-ctrl..."
     cd /tmp
-    curl -L https://github.com/aquasecurity/kube-bench/releases/download/v0.7.1/kube-bench_0.7.1_linux_amd64.tar.gz -o kube-bench.tar.gz
+
+    # Detect architecture
+    ARCH=$(uname -m)
+    case $ARCH in
+        x86_64)  ARCH="amd64" ;;
+        aarch64) ARCH="arm64" ;;
+        arm64)   ARCH="arm64" ;;
+    esac
+
+    curl -L "https://github.com/aquasecurity/kube-bench/releases/download/v0.8.0/kube-bench_0.8.0_linux_${ARCH}.tar.gz" -o kube-bench.tar.gz
     tar -xzf kube-bench.tar.gz
     sudo mv kube-bench /usr/local/bin/
     sudo chmod +x /usr/local/bin/kube-bench
@@ -36,7 +45,16 @@ set -e
 if ! command -v kube-bench &> /dev/null || [ ! -d /etc/kube-bench/cfg ]; then
     echo "Installing kube-bench on key-worker..."
     cd /tmp
-    curl -L https://github.com/aquasecurity/kube-bench/releases/download/v0.7.1/kube-bench_0.7.1_linux_amd64.tar.gz -o kube-bench.tar.gz
+
+    # Detect architecture
+    ARCH=$(uname -m)
+    case $ARCH in
+        x86_64)  ARCH="amd64" ;;
+        aarch64) ARCH="arm64" ;;
+        arm64)   ARCH="arm64" ;;
+    esac
+
+    curl -L "https://github.com/aquasecurity/kube-bench/releases/download/v0.8.0/kube-bench_0.8.0_linux_${ARCH}.tar.gz" -o kube-bench.tar.gz
     tar -xzf kube-bench.tar.gz
     sudo mv kube-bench /usr/local/bin/
     sudo chmod +x /usr/local/bin/kube-bench
