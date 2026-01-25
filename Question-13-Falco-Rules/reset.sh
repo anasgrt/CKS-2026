@@ -1,8 +1,9 @@
 #!/bin/bash
 # Reset Question 13 - Falco Rules
 
-# Delete test pod
+# Delete test pod and namespace
 kubectl delete pod test-pod -n falco-ns --ignore-not-found 2>/dev/null
+kubectl delete namespace falco-ns --ignore-not-found 2>/dev/null
 
 # Clean up custom Falco rules on key-worker
 ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -o LogLevel=ERROR key-worker 'bash -s' << 'ENDSSH' 2>/dev/null || true

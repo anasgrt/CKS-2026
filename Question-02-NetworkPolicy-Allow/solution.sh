@@ -1,13 +1,9 @@
 #!/bin/bash
 # Solution for Question 02 - NetworkPolicy Allow Specific Traffic
 
-echo "Solution: Create NetworkPolicies for microservices architecture"
-echo ""
-echo "Step 1: Create API NetworkPolicy YAML file"
-echo ""
-
+echo "=== API Pod Policy (from frontend + monitoring, to database + DNS) ==="
 cat << 'EOF'
-cat > /opt/course/02/api-netpol.yaml << 'YAML'
+cat <<YAML | kubectl apply -f -
 apiVersion: networking.k8s.io/v1
 kind: NetworkPolicy
 metadata:
@@ -17,56 +13,41 @@ spec:
   podSelector:
     matchLabels:
       tier: api
-  policyTypes:
-    - Ingress
-    - Egress
+  policyTypes: [Ingress, Egress]
   ingress:
-    # Allow from frontend pods
-    - from:
-        - podSelector:
-            matchLabels:
-              tier: frontend
-      ports:
-        - protocol: TCP
-          port: 8080
-    # Allow from monitoring namespace
-    - from:
-        - namespaceSelector:
-            matchLabels:
-              name: monitoring-ns
-      ports:
-        - protocol: TCP
-          port: 8080
+  - from:
+    - podSelector:
+        matchLabels:
+          tier: frontend
+    ports:
+    - port: 8080
+  - from:
+    - namespaceSelector:
+        matchLabels:
+          name: monitoring-ns
+    ports:
+    - port: 8080
   egress:
-    # Allow DNS
-    - to:
-        - namespaceSelector:
-            matchLabels:
-              kubernetes.io/metadata.name: kube-system
-      ports:
-        - protocol: UDP
-          port: 53
-        - protocol: TCP
-          port: 53
-    # Allow database access
-    - to:
-        - podSelector:
-            matchLabels:
-              tier: database
-      ports:
-        - protocol: TCP
-          port: 5432
+  - to:  # DNS
+    - namespaceSelector:
+        matchLabels:
+          kubernetes.io/metadata.name: kube-system
+    ports:
+    - port: 53
+      protocol: UDP
+  - to:  # Database
+    - podSelector:
+        matchLabels:
+          tier: database
+    ports:
+    - port: 5432
 YAML
-
-kubectl apply -f /opt/course/02/api-netpol.yaml
 EOF
 
 echo ""
-echo "Step 2: Create Database NetworkPolicy YAML file"
-echo ""
-
+echo "=== Database Pod Policy (from api only, DNS egress) ==="
 cat << 'EOF'
-cat > /opt/course/02/db-netpol.yaml << 'YAML'
+cat <<YAML | kubectl apply -f -
 apiVersion: networking.k8s.io/v1
 kind: NetworkPolicy
 metadata:
@@ -76,46 +57,28 @@ spec:
   podSelector:
     matchLabels:
       tier: database
-  policyTypes:
-    - Ingress
-    - Egress
+  policyTypes: [Ingress, Egress]
   ingress:
-    # Only allow from API pods
-    - from:
-        - podSelector:
-            matchLabels:
-              tier: api
-      ports:
-        - protocol: TCP
-          port: 5432
+  - from:
+    - podSelector:
+        matchLabels:
+          tier: api
+    ports:
+    - port: 5432
   egress:
-    # Only allow DNS
-    - to:
-        - namespaceSelector:
-            matchLabels:
-              kubernetes.io/metadata.name: kube-system
-      ports:
-        - protocol: UDP
-          port: 53
-        - protocol: TCP
-          port: 53
+  - to:  # DNS only
+    - namespaceSelector:
+        matchLabels:
+          kubernetes.io/metadata.name: kube-system
+    ports:
+    - port: 53
+      protocol: UDP
 YAML
-
-kubectl apply -f /opt/course/02/db-netpol.yaml
 EOF
 
 echo ""
-echo "Step 3: Test connectivity"
+echo "# Save files"
+echo "kubectl get netpol api-policy -n microservices-ns -o yaml > /opt/course/02/api-netpol.yaml"
+echo "kubectl get netpol database-policy -n microservices-ns -o yaml > /opt/course/02/db-netpol.yaml"
 echo ""
-echo "# Frontend -> Database should be BLOCKED:"
-echo "kubectl exec -n microservices-ns frontend -- curl -s --connect-timeout 2 database:5432"
-echo ""
-echo "# API -> Database should WORK:"
-echo "kubectl exec -n microservices-ns api -- curl -s --connect-timeout 2 database:5432"
-echo ""
-echo "Key Points:"
-echo "- Use podSelector to target specific pods"
-echo "- ingress.from defines allowed sources"
-echo "- egress.to defines allowed destinations"
-echo "- Always allow DNS (port 53) for name resolution"
-echo "- namespaceSelector can allow cross-namespace traffic"
+echo "Key: podSelector=who this applies to, ingress.from=allowed sources, egress.to=allowed destinations"

@@ -17,6 +17,8 @@ spec:
     runAsGroup: 3000
     fsGroup: 2000
     runAsNonRoot: true
+    seccompProfile:
+      type: RuntimeDefault
   containers:
   - name: nginx
     image: nginx

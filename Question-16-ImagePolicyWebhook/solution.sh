@@ -13,8 +13,8 @@ kind: Config
 clusters:
   - name: image-policy-webhook
     cluster:
-      server: https://image-policy.kube-system.svc:443
-      certificate-authority: /etc/kubernetes/pki/image-policy-ca.crt
+      server: https://image-policy-webhook.image-policy.svc:443
+      certificate-authority: /etc/kubernetes/pki/image-policy/ca.crt
 contexts:
   - name: image-policy
     context:
@@ -58,7 +58,7 @@ echo "Step 4: Configure API server"
 echo ""
 
 cat << 'EOF'
-# Edit /etc/kubernetes/manifests/kube-apiserver.yaml
+# Edit /var/lib/rancher/rke2/agent/pod-manifests/kube-apiserver.yaml
 # Add/modify these flags:
 
     - --enable-admission-plugins=NodeRestriction,ImagePolicyWebhook

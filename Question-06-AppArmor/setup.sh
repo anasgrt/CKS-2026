@@ -109,7 +109,8 @@ fi
 
 echo "✓ AppArmor kernel support is active"
 
-# Second pass: Create and load the profile
+# Second pass: Create the profile file but DO NOT load it
+# User must load it as part of the exercise
 ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -o LogLevel=ERROR key-worker 'bash -s' << 'ENDSSH'
 set -e
 
@@ -117,7 +118,7 @@ set -e
 sudo systemctl enable apparmor 2>/dev/null || true
 sudo systemctl start apparmor 2>/dev/null || true
 
-# Create the k8s-deny-write profile
+# Create the k8s-deny-write profile file (but DO NOT load it)
 sudo mkdir -p /etc/apparmor.d
 
 sudo tee /etc/apparmor.d/k8s-deny-write > /dev/null << 'EOF'
@@ -154,16 +155,9 @@ profile k8s-deny-write flags=(attach_disconnected,mediate_deleted) {
 }
 EOF
 
-# Load the profile
-sudo apparmor_parser -r /etc/apparmor.d/k8s-deny-write
-
-# Verify the profile is loaded
-if sudo aa-status | grep -q k8s-deny-write; then
-    echo "✓ AppArmor profile 'k8s-deny-write' loaded successfully"
-else
-    echo "✗ Failed to load AppArmor profile"
-    exit 1
-fi
+echo "✓ AppArmor profile file created at /etc/apparmor.d/k8s-deny-write"
+echo "  NOTE: Profile is NOT loaded. User must load it with:"
+echo "        sudo apparmor_parser -r /etc/apparmor.d/k8s-deny-write"
 ENDSSH
 
 # Create namespace
@@ -175,6 +169,8 @@ mkdir -p /opt/course/06
 echo ""
 echo "✓ Environment ready!"
 echo "  Namespace: apparmor-ns"
-echo "  AppArmor profile 'k8s-deny-write' loaded on key-worker"
+echo "  AppArmor profile FILE created at /etc/apparmor.d/k8s-deny-write on key-worker"
+echo "  NOTE: Profile is NOT loaded yet - this is part of the exercise!"
 echo ""
-echo "Verify with: ssh key-worker 'sudo aa-status | grep k8s-deny-write'"
+echo "Verify profile file exists: ssh key-worker 'ls -la /etc/apparmor.d/k8s-deny-write'"
+echo "Check if profile is loaded: ssh key-worker 'sudo aa-status | grep k8s-deny-write'"

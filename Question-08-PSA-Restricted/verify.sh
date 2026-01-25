@@ -91,8 +91,37 @@ else
     PASS=false
 fi
 
+# Check pod.yaml file
+echo ""
+echo "Checking output files..."
+if [ -f "/opt/course/08/pod.yaml" ]; then
+    echo -e "${GREEN}✓ pod.yaml saved to /opt/course/08/pod.yaml${NC}"
+else
+    echo -e "${RED}✗ pod.yaml not found at /opt/course/08/pod.yaml${NC}"
+    PASS=false
+fi
+
+# Check rejected-error.txt
+if [ -f "/opt/course/08/rejected-error.txt" ]; then
+    echo -e "${GREEN}✓ rejected-error.txt exists${NC}"
+
+    # Verify it contains PSA violation message
+    if grep -qi "violates\|forbidden\|denied" /opt/course/08/rejected-error.txt 2>/dev/null; then
+        echo -e "${GREEN}✓ rejected-error.txt contains rejection message${NC}"
+    else
+        echo -e "${RED}✗ rejected-error.txt should contain PSA violation message${NC}"
+        PASS=false
+    fi
+else
+    echo -e "${RED}✗ rejected-error.txt not found at /opt/course/08/rejected-error.txt${NC}"
+    PASS=false
+fi
+
+echo ""
 if $PASS; then
+    echo -e "${GREEN}All checks passed!${NC}"
     exit 0
 else
+    echo -e "${RED}Some checks failed.${NC}"
     exit 1
 fi

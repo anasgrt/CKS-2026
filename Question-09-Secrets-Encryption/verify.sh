@@ -61,8 +61,8 @@ else
 fi
 
 # Check API server has encryption config (if we can access the manifest)
-if [ -f "/etc/kubernetes/manifests/kube-apiserver.yaml" ]; then
-    if grep -q "encryption-provider-config" /etc/kubernetes/manifests/kube-apiserver.yaml; then
+if [ -f "/var/lib/rancher/rke2/agent/pod-manifests/kube-apiserver.yaml" ]; then
+    if grep -q "encryption-provider-config" /var/lib/rancher/rke2/agent/pod-manifests/kube-apiserver.yaml; then
         echo -e "${GREEN}✓ API server configured with encryption provider${NC}"
     else
         echo -e "${RED}✗ API server should have --encryption-provider-config flag${NC}"

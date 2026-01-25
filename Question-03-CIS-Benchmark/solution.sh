@@ -1,59 +1,57 @@
 #!/bin/bash
 # Solution for Question 03 - CIS Benchmark
 
-echo "Solution: Fix CIS Benchmark violations"
+echo "=== CONTROL PLANE (key-ctrl) ==="
 echo ""
-echo "Step 1: Run kube-bench and save output"
+echo "# 1. Run kube-bench and save"
+echo "kube-bench run --targets=master > /opt/course/03/kube-bench-before.txt"
 echo ""
-echo "kube-bench run --targets=master > /opt/course/03/kube-bench-before.txt 2>&1"
-echo ""
-echo "Step 2: SSH to control plane node and edit API server manifest"
-echo ""
-echo "sudo vim /etc/kubernetes/manifests/kube-apiserver.yaml"
-echo ""
-echo "Step 3: Add/modify these flags in the command section:"
-echo ""
-
+echo "# 2. Edit API server manifest"
+echo "sudo vim /var/lib/rancher/rke2/agent/pod-manifests/kube-apiserver.yaml"
 cat << 'EOF'
-spec:
-  containers:
-  - command:
-    - kube-apiserver
-    - --anonymous-auth=false           # Add this line
-    - --profiling=false                # Add this line
-    - --authorization-mode=Node,RBAC   # Ensure RBAC is included
-    # ... other existing flags
+# Add these flags to command section:
+    - --anonymous-auth=false
+    - --profiling=false
+    - --authorization-mode=Node,RBAC
 EOF
 
 echo ""
-echo "Step 4: Save your fixes summary"
-echo ""
-
+echo "# 3. Write fixes.txt"
 cat << 'EOF'
 cat > /opt/course/03/fixes.txt << 'TXT'
-CIS Benchmark Fixes Applied:
+Control Plane Fixes:
+1. --anonymous-auth=false (CIS 1.2.1)
+2. --profiling=false (CIS 1.2.18)
+3. --authorization-mode=Node,RBAC (CIS 1.2.8)
 
-1. Set --anonymous-auth=false
-   - Prevents unauthenticated access to API server
-   - CIS 1.2.1
-
-2. Added --profiling=false  
-   - Disables profiling endpoint which can expose sensitive data
-   - CIS 1.2.18
-
-3. Verified --authorization-mode includes RBAC
-   - Ensures proper authorization is enforced
-   - CIS 1.2.8
+Worker Node Fixes:
+4. protect-kernel-defaults=true (CIS 4.2.6)
+5. read-only-port=0 (CIS 4.2.4)
 TXT
 EOF
 
 echo ""
-echo "Step 5: Wait for API server to restart (automatic when manifest changes)"
+echo "=== WORKER NODE (key-worker) ==="
 echo ""
-echo "kubectl get pods -n kube-system | grep api"
+echo "# 4. Run kube-bench on worker"
+echo "ssh key-worker 'kube-bench run --targets=node'"
 echo ""
-echo "Key Points:"
-echo "- Static pod manifests are in /etc/kubernetes/manifests/"
-echo "- kubelet watches this directory and restarts pods on change"
-echo "- Always backup manifests before editing"
-echo "- Run kube-bench again after fixes to verify"
+echo "# 5. Edit RKE2 config"
+echo "ssh key-worker"
+echo "sudo vim /etc/rancher/rke2/config.yaml"
+cat << 'EOF'
+# Add:
+kubelet-arg:
+- "protect-kernel-defaults=true"
+- "read-only-port=0"
+
+# Then restart:
+sudo systemctl restart rke2-agent
+EOF
+
+echo ""
+echo "# 6. Run kube-bench again"
+echo "kube-bench run --targets=master > /opt/course/03/kube-bench-after.txt"
+echo "ssh key-worker 'kube-bench run --targets=node' >> /opt/course/03/kube-bench-after.txt"
+echo ""
+echo "Key: API server manifest auto-restarts on save. Kubelet needs service restart."
