@@ -8,17 +8,20 @@ rm -rf /opt/course/09
 # Function to revert API server encryption config
 revert_apiserver_encryption() {
     local MANIFEST="/etc/kubernetes/manifests/kube-apiserver.yaml"
-    local BACKUP="/etc/kubernetes/manifests/kube-apiserver.yaml.backup-encryption"
+    # Store backup OUTSIDE manifests directory to avoid kubelet interference
+    local BACKUP="/tmp/kube-apiserver.yaml.backup-encryption"
 
     # Check if any encryption config is present in the manifest (flag, volume, or volumeMount)
     if ! grep -q -E "encryption-provider-config|name: encryption-config" "$MANIFEST" 2>/dev/null; then
         echo "No encryption config found in API server manifest, skipping revert."
+        # Still clean up any leftover backup files in manifests directory
+        sudo rm -f /etc/kubernetes/manifests/kube-apiserver.yaml.backup-encryption 2>/dev/null
         return 0
     fi
 
     echo "Reverting API server encryption configuration..."
 
-    # Create backup
+    # Create backup in /tmp (NOT in manifests directory)
     sudo cp "$MANIFEST" "$BACKUP"
 
     # Check if yq is available
@@ -90,17 +93,37 @@ else:
 PYTHON_SCRIPT
     fi
 
-    echo "API server manifest updated. Waiting for API server to restart..."
-
     # Remove the encryption config file
     sudo rm -f /etc/kubernetes/encryption-config.yaml
 
-    # Wait for API server to restart (it auto-restarts when manifest changes)
-    sleep 5
-    local max_wait=60
+    # Clean up any leftover backup files in manifests directory
+    sudo rm -f /etc/kubernetes/manifests/kube-apiserver.yaml.backup-encryption 2>/dev/null
+
+    echo "API server manifest updated."
+
+    # CRITICAL: Force kubelet to recreate the pod sandbox with new configuration
+    # The old pod sandbox caches the command args, so we must remove it completely
+    echo "Forcing API server pod recreation to apply new configuration..."
+
+    # Stop kubelet to prevent it from fighting us
+    sudo systemctl stop kubelet
+
+    # Find and remove all apiserver pod sandboxes
+    # Using grep to reliably find the pod, then extract just the ID
+    for POD_ID in $(crictl pods 2>/dev/null | grep kube-apiserver | awk '{print $1}'); do
+        echo "Removing old API server pod sandbox ($POD_ID)..."
+        crictl stopp "$POD_ID" 2>/dev/null || true
+        crictl rmp "$POD_ID" 2>/dev/null || true
+    done
+
+    # Start kubelet to create fresh pod from updated manifest
+    sudo systemctl start kubelet
+
+    echo "Waiting for API server to come back online with new configuration..."
+    local max_wait=90
     local waited=0
     while ! kubectl get nodes &>/dev/null && [ $waited -lt $max_wait ]; do
-        echo "Waiting for API server to come back online... (${waited}s)"
+        echo "Waiting for API server... (${waited}s)"
         sleep 5
         waited=$((waited + 5))
     done
@@ -111,7 +134,7 @@ PYTHON_SCRIPT
     else
         echo "WARNING: API server did not come back online within ${max_wait}s."
         echo "Backup saved at: $BACKUP"
-        echo "You may need to manually fix the manifest."
+        echo "You may need to manually check: crictl logs \$(crictl ps -a | grep apiserver | head -1 | awk '{print \$1}')"
     fi
 }
 
@@ -122,13 +145,16 @@ if ssh -o StrictHostKeyChecking=no -o ConnectTimeout=5 controlplane 'test -f /et
     # Run the revert function on controlplane via SSH
     ssh controlplane "$(declare -f revert_apiserver_encryption); revert_apiserver_encryption" 2>/dev/null || true
 
-    # Also clean up any encryption config directories
+    # Also clean up any encryption config directories and leftover backup files
     ssh controlplane 'sudo rm -rf /etc/kubernetes/enc' 2>/dev/null || true
+    ssh controlplane 'sudo rm -f /etc/kubernetes/manifests/kube-apiserver.yaml.backup-encryption' 2>/dev/null || true
 else
     # Try locally if not using SSH (single-node cluster)
     if [ -f /etc/kubernetes/manifests/kube-apiserver.yaml ]; then
         revert_apiserver_encryption
         sudo rm -rf /etc/kubernetes/enc 2>/dev/null || true
+        # Clean up any leftover backup files in manifests directory
+        sudo rm -f /etc/kubernetes/manifests/kube-apiserver.yaml.backup-encryption 2>/dev/null || true
     fi
 fi
 
