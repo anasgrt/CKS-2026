@@ -870,6 +870,13 @@ resources:
       - identity: {}    # Fallback for reading unencrypted secrets
 ```
 
+> **⚠️ IMPORTANT: Provider Order Matters!**
+> - The **first provider** in the list is used to **encrypt new secrets**
+> - All providers are tried in order when **decrypting** existing secrets
+> - If `identity: {}` is listed **first**, new secrets will be stored **unencrypted**!
+> - Always put your encryption provider (aescbc, aesgcm, secretbox) **before** `identity: {}`
+> - The `identity: {}` should only be last as a fallback to read pre-existing unencrypted secrets
+
 ### Step 3: Configure API server
 Edit `/etc/kubernetes/manifests/kube-apiserver.yaml`:
 ```yaml
