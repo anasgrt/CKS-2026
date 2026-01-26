@@ -105,20 +105,97 @@ EOF
     # This reads with old key (aescbc) and writes with new first provider (identity)
     local namespaces=$(kubectl get namespaces -o jsonpath='{.items[*].metadata.name}' 2>/dev/null)
 
+    local decrypt_failed=false
     for ns in $namespaces; do
         local secrets=$(kubectl get secrets -n "$ns" -o jsonpath='{.items[*].metadata.name}' 2>/dev/null)
+        if [ $? -ne 0 ]; then
+            echo "    WARNING: Failed to list secrets in namespace $ns (may have corrupted secrets)"
+            decrypt_failed=true
+            continue
+        fi
         for secret in $secrets; do
             # Skip service account tokens (they're managed by the system)
             if [[ "$secret" == *-token-* ]] || [[ "$secret" == "default-token"* ]]; then
                 continue
             fi
             echo "    Re-encrypting: $ns/$secret"
-            kubectl get secret "$secret" -n "$ns" -o json 2>/dev/null | kubectl replace -f - 2>/dev/null || true
+            if ! kubectl get secret "$secret" -n "$ns" -o json 2>/dev/null | kubectl replace -f - 2>/dev/null; then
+                echo "    WARNING: Failed to re-encrypt $ns/$secret"
+                decrypt_failed=true
+            fi
         done
     done
 
-    echo "  All secrets have been re-encrypted to plaintext."
+    if [ "$decrypt_failed" = true ]; then
+        echo ""
+        echo "  WARNING: Some secrets could not be decrypted."
+        echo "  This usually means they were encrypted with a different key."
+        echo "  Attempting to delete corrupted secrets from etcd directly..."
+        delete_corrupted_secrets_from_etcd
+    fi
+
+    echo "  Secret decryption phase complete."
     sudo rm -f /tmp/encryption-config-original.yaml
+}
+
+# Function to delete corrupted secrets directly from etcd
+delete_corrupted_secrets_from_etcd() {
+    echo "=== Deleting corrupted secrets from etcd ==="
+
+    # Find etcd certs
+    local ETCD_CACERT="/etc/kubernetes/pki/etcd/ca.crt"
+    local ETCD_CERT="/etc/kubernetes/pki/etcd/server.crt"
+    local ETCD_KEY="/etc/kubernetes/pki/etcd/server.key"
+
+    if [ ! -f "$ETCD_CACERT" ] || [ ! -f "$ETCD_CERT" ] || [ ! -f "$ETCD_KEY" ]; then
+        echo "  ERROR: etcd certificates not found. Cannot clean corrupted secrets."
+        return 1
+    fi
+
+    # List all secrets in etcd and try to identify corrupted ones
+    echo "  Scanning etcd for secrets..."
+
+    # Get all secret keys from etcd
+    local secret_keys=$(ETCDCTL_API=3 etcdctl \
+        --cacert="$ETCD_CACERT" \
+        --cert="$ETCD_CERT" \
+        --key="$ETCD_KEY" \
+        get /registry/secrets --prefix --keys-only 2>/dev/null)
+
+    if [ -z "$secret_keys" ]; then
+        echo "  No secrets found in etcd."
+        return 0
+    fi
+
+    # For each secret, try to read it via kubectl. If it fails, delete from etcd.
+    echo "$secret_keys" | while read -r key; do
+        [ -z "$key" ] && continue
+
+        # Extract namespace and name from the key: /registry/secrets/<namespace>/<name>
+        local ns=$(echo "$key" | cut -d'/' -f4)
+        local name=$(echo "$key" | cut -d'/' -f5)
+
+        if [ -z "$ns" ] || [ -z "$name" ]; then
+            continue
+        fi
+
+        # Skip system service account tokens - they'll be recreated
+        if [[ "$name" == *-token-* ]] || [[ "$name" == "default-token"* ]]; then
+            continue
+        fi
+
+        # Try to read the secret via API
+        if ! kubectl get secret "$name" -n "$ns" &>/dev/null 2>&1; then
+            echo "  Deleting corrupted secret from etcd: $ns/$name"
+            ETCDCTL_API=3 etcdctl \
+                --cacert="$ETCD_CACERT" \
+                --cert="$ETCD_CERT" \
+                --key="$ETCD_KEY" \
+                del "$key" 2>/dev/null || true
+        fi
+    done
+
+    echo "  Corrupted secrets cleanup complete."
 }
 
 # Function to completely remove encryption configuration
