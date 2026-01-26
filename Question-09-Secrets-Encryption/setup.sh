@@ -3,6 +3,12 @@
 
 set -e
 
+# Install etcdctl if not present
+if ! command -v etcdctl &> /dev/null; then
+    echo "Installing etcdctl..."
+    apt-get update && apt-get install -y etcd-client
+fi
+
 # Create namespace
 kubectl create namespace secrets-ns --dry-run=client -o yaml | kubectl apply -f -
 
