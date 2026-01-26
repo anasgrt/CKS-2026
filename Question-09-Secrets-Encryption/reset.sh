@@ -335,6 +335,30 @@ force_delete_namespace "secrets-ns"
 rm -rf /opt/course/09
 sudo rm -rf /etc/kubernetes/enc 2>/dev/null || true
 
+# Step 4: Final cleanup of any remaining corrupted secrets
+echo "=== Step 4: Final cleanup of corrupted secrets ==="
+echo "  Scanning etcd for any remaining corrupted secrets..."
+ETCDCTL_API=3 etcdctl \
+  --cacert=/etc/kubernetes/pki/etcd/ca.crt \
+  --cert=/etc/kubernetes/pki/etcd/server.crt \
+  --key=/etc/kubernetes/pki/etcd/server.key \
+  get /registry/secrets --prefix --keys-only 2>/dev/null | while read key; do
+    [ -z "$key" ] && continue
+    ns=$(echo "$key" | cut -d'/' -f4)
+    name=$(echo "$key" | cut -d'/' -f5)
+    if [ -n "$ns" ] && [ -n "$name" ]; then
+      if ! kubectl get secret "$name" -n "$ns" &>/dev/null 2>&1; then
+        echo "  Deleting corrupted secret: $ns/$name"
+        ETCDCTL_API=3 etcdctl \
+          --cacert=/etc/kubernetes/pki/etcd/ca.crt \
+          --cert=/etc/kubernetes/pki/etcd/server.crt \
+          --key=/etc/kubernetes/pki/etcd/server.key \
+          del "$key" 2>/dev/null || true
+      fi
+    fi
+done
+echo "  Corrupted secrets cleanup complete."
+
 echo ""
 echo "=== Question 09 Reset Complete! ==="
 echo ""
