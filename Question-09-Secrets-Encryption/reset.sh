@@ -10,8 +10,8 @@ revert_apiserver_encryption() {
     local MANIFEST="/etc/kubernetes/manifests/kube-apiserver.yaml"
     local BACKUP="/etc/kubernetes/manifests/kube-apiserver.yaml.backup-encryption"
 
-    # Check if encryption config is present in the manifest
-    if ! grep -q "encryption-provider-config" "$MANIFEST" 2>/dev/null; then
+    # Check if any encryption config is present in the manifest (flag, volume, or volumeMount)
+    if ! grep -q -E "encryption-provider-config|name: encryption-config" "$MANIFEST" 2>/dev/null; then
         echo "No encryption config found in API server manifest, skipping revert."
         return 0
     fi
@@ -25,8 +25,9 @@ revert_apiserver_encryption() {
     if command -v yq &>/dev/null; then
         echo "Using yq to remove encryption config..."
 
-        # Remove the --encryption-provider-config flag
-        sudo yq -i 'del(.spec.containers[0].command[] | select(. == "--encryption-provider-config=/etc/kubernetes/encryption-config.yaml"))' "$MANIFEST"
+        # Remove the --encryption-provider-config flag (handle any path)
+        sudo yq -i 'del(.spec.containers[0].command[] | select(. == "--encryption-provider-config=*"))' "$MANIFEST"
+        sudo yq -i 'del(.spec.containers[0].command[] | select(test("--encryption-provider-config")))' "$MANIFEST"
 
         # Remove the encryption-config volumeMount
         sudo yq -i 'del(.spec.containers[0].volumeMounts[] | select(.name == "encryption-config"))' "$MANIFEST"
@@ -34,23 +35,19 @@ revert_apiserver_encryption() {
         # Remove the encryption-config volume
         sudo yq -i 'del(.spec.volumes[] | select(.name == "encryption-config"))' "$MANIFEST"
     else
-        echo "Using sed to remove encryption config..."
+        echo "Using sed/perl to remove encryption config..."
 
         # Remove the --encryption-provider-config flag line
         sudo sed -i '/--encryption-provider-config/d' "$MANIFEST"
 
-        # Remove encryption-config volumeMount block (4 lines: name, mountPath, readOnly + potential blank)
-        sudo sed -i '/name: encryption-config/{N;N;N;/mountPath:.*encryption-config/d}' "$MANIFEST"
+        # Remove volumeMount block (format: mountPath, name, readOnly)
+        sudo perl -i -0pe 's/\s*- mountPath: \/etc\/kubernetes\/encryption-config\.yaml\n\s*name: encryption-config\n\s*readOnly: true\n?//g' "$MANIFEST"
 
-        # Remove encryption-config volume block (4 lines: name, hostPath, path, type)
-        sudo sed -i '/- name: encryption-config/{N;N;N;N;/hostPath:/d}' "$MANIFEST"
+        # Remove volume block (format: hostPath with nested path, type, name)
+        sudo perl -i -0pe 's/\s*- hostPath:\n\s*path: \/etc\/kubernetes\/encryption-config\.yaml\n\s*type: \w+\n\s*name: encryption-config\n?//g' "$MANIFEST"
 
-        # Cleaner approach: use perl for multi-line removal
-        # Remove volumeMount block
-        sudo perl -i -0pe 's/\s*- name: encryption-config\n\s*mountPath: \/etc\/kubernetes\/encryption-config\.yaml\n\s*readOnly: true\n?//g' "$MANIFEST"
-
-        # Remove volume block
-        sudo perl -i -0pe 's/\s*- name: encryption-config\n\s*hostPath:\n\s*path: \/etc\/kubernetes\/encryption-config\.yaml\n\s*type: File\n?//g' "$MANIFEST"
+        # Alternative volume format (name first)
+        sudo perl -i -0pe 's/\s*- name: encryption-config\n\s*hostPath:\n\s*path: \/etc\/kubernetes\/encryption-config\.yaml\n\s*type: \w+\n?//g' "$MANIFEST"
     fi
 
     echo "API server manifest updated. Waiting for API server to restart..."
