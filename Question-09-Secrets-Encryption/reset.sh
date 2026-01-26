@@ -1,8 +1,10 @@
 #!/bin/bash
 # Reset Question 09 - Secrets Encryption
 
-kubectl delete secret test-secret -n secrets-ns --ignore-not-found
-kubectl delete namespace secrets-ns --ignore-not-found
+# Use timeout for kubectl commands since API server might be down
+# These are best-effort cleanup - if API server is down, we'll fix it below
+timeout 10 kubectl delete secret test-secret -n secrets-ns --ignore-not-found 2>/dev/null || true
+timeout 10 kubectl delete namespace secrets-ns --ignore-not-found 2>/dev/null || true
 rm -rf /opt/course/09
 
 # Function to revert API server encryption config
@@ -122,13 +124,13 @@ PYTHON_SCRIPT
     echo "Waiting for API server to come back online with new configuration..."
     local max_wait=90
     local waited=0
-    while ! kubectl get nodes &>/dev/null && [ $waited -lt $max_wait ]; do
+    while ! timeout 5 kubectl get nodes &>/dev/null && [ $waited -lt $max_wait ]; do
         echo "Waiting for API server... (${waited}s)"
-        sleep 5
+        sleep 3
         waited=$((waited + 5))
     done
 
-    if kubectl get nodes &>/dev/null; then
+    if timeout 5 kubectl get nodes &>/dev/null; then
         echo "API server is back online."
         sudo rm -f "$BACKUP"
     else
