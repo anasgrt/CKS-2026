@@ -4,15 +4,33 @@
 set -e
 
 # Install kubesec if not present
-if ! command -v kubesec &> /dev/null; then
+if ! command -v kubesec &> /dev/null || ! kubesec version &> /dev/null; then
     echo "Installing kubesec..."
-    # Download latest kubesec binary
-    curl -sSL https://github.com/controlplaneio/kubesec/releases/download/v2.14.0/kubesec_linux_amd64.tar.gz -o /tmp/kubesec.tar.gz
-    tar -xzf /tmp/kubesec.tar.gz -C /tmp
-    sudo mv /tmp/kubesec /usr/local/bin/
-    sudo chmod +x /usr/local/bin/kubesec
-    rm -f /tmp/kubesec.tar.gz
-    echo "kubesec installed successfully."
+
+    # Detect architecture
+    ARCH=$(uname -m)
+    case $ARCH in
+        x86_64|amd64)
+            KUBESEC_ARCH="amd64"
+            ;;
+        aarch64|arm64)
+            KUBESEC_ARCH="arm64"
+            ;;
+        *)
+            echo "WARNING: Unsupported architecture $ARCH. Using Docker method instead."
+            KUBESEC_ARCH=""
+            ;;
+    esac
+
+    if [ -n "$KUBESEC_ARCH" ]; then
+        # Download kubesec binary for the correct architecture
+        curl -sSL "https://github.com/controlplaneio/kubesec/releases/download/v2.14.0/kubesec_linux_${KUBESEC_ARCH}.tar.gz" -o /tmp/kubesec.tar.gz
+        tar -xzf /tmp/kubesec.tar.gz -C /tmp
+        sudo mv /tmp/kubesec /usr/local/bin/
+        sudo chmod +x /usr/local/bin/kubesec
+        rm -f /tmp/kubesec.tar.gz
+        echo "kubesec installed successfully for $KUBESEC_ARCH."
+    fi
 fi
 
 # Verify kubesec is working
