@@ -19,8 +19,7 @@ resources:
   - identity: {}
 YAML
 
-sudo mkdir -p /etc/kubernetes/enc
-sudo cp /opt/course/09/encryption-config.yaml /etc/kubernetes/enc/
+sudo cp /opt/course/09/encryption-config.yaml /etc/kubernetes/encryption-config.yaml
 EOF
 
 echo ""
@@ -28,18 +27,18 @@ echo "=== Step 2: Edit API Server ==="
 echo "sudo vim /etc/kubernetes/manifests/kube-apiserver.yaml"
 cat << 'EOF'
 # Add to command:
-    - --encryption-provider-config=/etc/kubernetes/enc/encryption-config.yaml
+    - --encryption-provider-config=/etc/kubernetes/encryption-config.yaml
 
-# Add volumeMount:
-    - name: enc
-      mountPath: /etc/kubernetes/enc
+# Add volumeMount (pki volume already mounts /etc/kubernetes/pki, but we need /etc/kubernetes):
+    - name: encryption-config
+      mountPath: /etc/kubernetes/encryption-config.yaml
       readOnly: true
 
 # Add volume:
-  - name: enc
+  - name: encryption-config
     hostPath:
-      path: /etc/kubernetes/enc
-      type: DirectoryOrCreate
+      path: /etc/kubernetes/encryption-config.yaml
+      type: File
 EOF
 
 echo ""
