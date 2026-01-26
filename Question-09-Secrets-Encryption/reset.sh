@@ -35,19 +35,59 @@ revert_apiserver_encryption() {
         # Remove the encryption-config volume
         sudo yq -i 'del(.spec.volumes[] | select(.name == "encryption-config"))' "$MANIFEST"
     else
-        echo "Using sed/perl to remove encryption config..."
+        echo "Using Python to remove encryption config..."
 
-        # Remove the --encryption-provider-config flag line
-        sudo sed -i '/--encryption-provider-config/d' "$MANIFEST"
+        # Use Python for safe YAML manipulation (available on most systems)
+        sudo python3 << 'PYTHON_SCRIPT'
+import yaml
+import sys
 
-        # Remove volumeMount block (format: mountPath, name, readOnly)
-        sudo perl -i -0pe 's/\s*- mountPath: \/etc\/kubernetes\/encryption-config\.yaml\n\s*name: encryption-config\n\s*readOnly: true\n?//g' "$MANIFEST"
+manifest_path = "/etc/kubernetes/manifests/kube-apiserver.yaml"
 
-        # Remove volume block (format: hostPath with nested path, type, name)
-        sudo perl -i -0pe 's/\s*- hostPath:\n\s*path: \/etc\/kubernetes\/encryption-config\.yaml\n\s*type: \w+\n\s*name: encryption-config\n?//g' "$MANIFEST"
+with open(manifest_path, 'r') as f:
+    manifest = yaml.safe_load(f)
 
-        # Alternative volume format (name first)
-        sudo perl -i -0pe 's/\s*- name: encryption-config\n\s*hostPath:\n\s*path: \/etc\/kubernetes\/encryption-config\.yaml\n\s*type: \w+\n?//g' "$MANIFEST"
+modified = False
+
+# Remove --encryption-provider-config flag from command
+if 'spec' in manifest and 'containers' in manifest['spec']:
+    for container in manifest['spec']['containers']:
+        if 'command' in container:
+            original_len = len(container['command'])
+            container['command'] = [
+                cmd for cmd in container['command']
+                if not cmd.startswith('--encryption-provider-config')
+            ]
+            if len(container['command']) < original_len:
+                modified = True
+
+        # Remove encryption-config volumeMount
+        if 'volumeMounts' in container:
+            original_len = len(container['volumeMounts'])
+            container['volumeMounts'] = [
+                vm for vm in container['volumeMounts']
+                if vm.get('name') != 'encryption-config'
+            ]
+            if len(container['volumeMounts']) < original_len:
+                modified = True
+
+# Remove encryption-config volume
+if 'spec' in manifest and 'volumes' in manifest['spec']:
+    original_len = len(manifest['spec']['volumes'])
+    manifest['spec']['volumes'] = [
+        v for v in manifest['spec']['volumes']
+        if v.get('name') != 'encryption-config'
+    ]
+    if len(manifest['spec']['volumes']) < original_len:
+        modified = True
+
+if modified:
+    with open(manifest_path, 'w') as f:
+        yaml.dump(manifest, f, default_flow_style=False, sort_keys=False)
+    print("Manifest updated successfully")
+else:
+    print("No encryption config found to remove")
+PYTHON_SCRIPT
     fi
 
     echo "API server manifest updated. Waiting for API server to restart..."
