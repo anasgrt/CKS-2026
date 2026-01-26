@@ -55,14 +55,16 @@ get_question_dir() {
         local num=$input
     fi
 
-    # Pad the number to 2 digits
-    local padded_num=$(printf '%02d' $num 2>/dev/null)
+    # Strip leading zeros to avoid octal interpretation (e.g., 08, 09)
+    num=$((10#$num)) 2>/dev/null || num=""
 
-    # If printf failed (input wasn't a number), try to find by exact directory name
-    if [ $? -ne 0 ]; then
-        local dir=$(find $BASE_DIR -maxdepth 1 -type d -name "$input" 2>/dev/null | head -1)
-    else
+    # Pad the number to 2 digits
+    if [ -n "$num" ]; then
+        local padded_num=$(printf '%02d' $num)
         local dir=$(find $BASE_DIR -maxdepth 1 -type d -name "Question-${padded_num}-*" 2>/dev/null | head -1)
+    else
+        # Input wasn't a number, try to find by exact directory name
+        local dir=$(find $BASE_DIR -maxdepth 1 -type d -name "$input" 2>/dev/null | head -1)
     fi
 
     echo "$dir"
