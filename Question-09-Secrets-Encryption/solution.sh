@@ -53,5 +53,13 @@ ETCDCTL_API=3 etcdctl \
   --key=/etc/kubernetes/pki/etcd/server.key \
   get /registry/secrets/secrets-ns/test-secret | hexdump -C > /opt/course/09/verification.txt
 EOF
+
+echo ""
+echo "=== Step 4: Re-encrypt All Existing Secrets ==="
+echo "kubectl get secrets --all-namespaces -o json | kubectl replace -f -"
+echo ""
+echo "# This reads all secrets and writes them back, causing them to be encrypted with the new provider"
+echo "# Any secrets created before encryption was enabled will now be encrypted at rest in etcd"
+
 echo ""
 echo "Key: identity: {} allows reading old unencrypted secrets. First provider encrypts new secrets."
