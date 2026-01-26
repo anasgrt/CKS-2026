@@ -812,7 +812,7 @@ kubectl run test --image=nginx -n psa-restricted
 # Error: violates "restricted" policy
 
 # Save the error message
-kubectl run test --image=nginx -n psa-restricted 2>&1 > /opt/course/08/rejected-error.txt
+kubectl run test --image=nginx -n psa-restricted &> /opt/course/08/rejected-error.txt
 ```
 
 ---
@@ -893,7 +893,7 @@ spec:
 ### Step 4: Wait for API server restart
 ```bash
 # Watch for API server to restart
-watch crictl ps | grep kube-apiserver
+watch "crictl ps | grep kube-apiserver"
 
 # Or check pods
 kubectl get pods -n kube-system | grep api
@@ -1350,7 +1350,7 @@ spec:
 mkdir -p /var/log/kubernetes/audit
 
 # Wait for API server to restart
-watch crictl ps | grep kube-apiserver
+watch "crictl ps | grep kube-apiserver"
 ```
 
 ### Step 4: Test and find audit entry
@@ -1522,7 +1522,7 @@ spec:
 ### Step 4: Test the webhook
 ```bash
 # Wait for API server to restart
-watch crictl ps | grep kube-apiserver
+watch "crictl ps | grep kube-apiserver"
 
 # Test allowed image (depends on webhook policy)
 kubectl run test --image=myregistry.io/nginx
@@ -1545,7 +1545,9 @@ kubectl run test2 --image=docker.io/nginx
 
 ### Step 1: Identify cluster version
 ```bash
-kubectl version --short
+kubectl version
+# or for just server version
+kubectl version -o json | jq -r '.serverVersion.gitVersion'
 # or
 kubectl get nodes -o wide
 ```
@@ -1857,6 +1859,570 @@ crictl inspect <container-id>
 | Microservice Vulnerabilities | 20% | PSA, Secrets Encryption, SecurityContext |
 | Supply Chain Security | 20% | Trivy, Kubesec, ImagePolicyWebhook |
 | Monitoring & Runtime | 20% | Falco, Audit Logs |
+
+---
+
+## Common Exam Mistakes to Avoid
+
+| Mistake | Solution |
+|---------|----------|
+| Forgetting namespace | Always use `-n <namespace>` |
+| Not waiting for API server restart | Watch crictl ps after manifest changes |
+| Wrong output file paths | Double-check paths in question |
+| Using `--dry-run` alone | Use `--dry-run=client -o yaml` |
+| Forgetting DNS in NetworkPolicy | Add port 53 UDP/TCP egress |
+| Missing seccomp for PSA restricted | Add `seccompProfile.type: RuntimeDefault` |
+| Forgetting `capabilities.drop: ALL` | Required for PSA restricted |
+| Not verifying changes | Always `kubectl get` or `describe` after apply |
+
+---
+
+# Additional CKS Topics
+
+The following topics are also part of the CKS curriculum and may appear on the exam.
+
+---
+
+# 19. Kubernetes Version Upgrades (Security Focus)
+
+## Theory
+Keeping Kubernetes up-to-date is critical for security. New versions patch CVEs and security vulnerabilities.
+
+> **Note:** Detailed upgrade procedures are primarily tested on CKA. CKS focuses on understanding WHY upgrades matter for security.
+
+**Security Rationale:**
+- Each Kubernetes release patches known CVEs
+- Outdated clusters are vulnerable to published exploits
+- Kubernetes supports only the **3 most recent minor versions**
+- Components must be within one minor version of each other
+
+**Upgrade Order (for reference):**
+1. Control plane nodes (one at a time)
+2. Worker nodes (drain → upgrade → uncordon)
+
+---
+
+## Quick Reference Commands
+
+```bash
+# Check current versions
+kubectl get nodes
+kubectl version
+
+# View available upgrades and CVE fixes
+kubeadm upgrade plan
+
+# Key upgrade commands (control plane)
+kubeadm upgrade apply v1.31.0
+
+# Key upgrade commands (worker nodes)
+kubeadm upgrade node
+```
+
+---
+
+## Security Considerations
+
+| Aspect | Security Impact |
+|--------|-----------------|
+| Outdated API server | Exposed to known CVEs |
+| Version skew | Compatibility issues, potential security gaps |
+| Delayed patching | Longer exposure window to exploits |
+| Upgrade testing | Prevents security misconfigurations |
+
+---
+
+# 20. Host OS Hardening
+
+## Theory
+Minimizing the host OS attack surface reduces risk. Remove unnecessary packages, disable unused services, and restrict access.
+
+**Key Principles:**
+- Remove unnecessary packages and services
+- Disable unused kernel modules
+- Use minimal base OS (e.g., Container-Optimized OS, Flatcar)
+- Restrict SSH access
+
+---
+
+## Steps: Harden Worker Node
+
+### Step 1: Remove unnecessary packages
+```bash
+ssh node01
+
+# List installed packages
+dpkg -l | grep -E "(telnet|ftp|rsh)"
+
+# Remove unnecessary packages
+apt-get remove --purge telnet ftp rsh-client
+apt-get autoremove
+```
+
+### Step 2: Disable unnecessary services
+```bash
+# List running services
+systemctl list-units --type=service --state=running
+
+# Disable unnecessary services
+systemctl disable --now snapd
+systemctl disable --now avahi-daemon
+```
+
+### Step 3: Restrict kernel modules
+```bash
+# Blacklist unnecessary modules
+cat << EOF > /etc/modprobe.d/k8s-security.conf
+blacklist dccp
+blacklist sctp
+blacklist rds
+blacklist tipc
+EOF
+
+# Apply changes
+update-initramfs -u
+```
+
+### Step 4: Verify with kube-bench
+```bash
+kube-bench run --targets=node
+```
+
+---
+
+# 21. Pod-to-Pod Encryption (mTLS)
+
+## Theory
+By default, pod-to-pod traffic is unencrypted. **Mutual TLS (mTLS)** encrypts traffic between services using service mesh solutions like **Istio** or **Cilium**.
+
+**Benefits:**
+- Encrypts all pod-to-pod communication
+- Provides identity verification
+- Zero-trust network model
+
+---
+
+## Steps: Enable mTLS with Istio
+
+### Step 1: Verify Istio is installed
+```bash
+kubectl get pods -n istio-system
+istioctl version
+```
+
+### Step 2: Enable strict mTLS for namespace
+```yaml
+# /opt/course/21/peer-auth.yaml
+apiVersion: security.istio.io/v1beta1
+kind: PeerAuthentication
+metadata:
+  name: default
+  namespace: secure-ns
+spec:
+  mtls:
+    mode: STRICT    # Enforce mTLS for all traffic
+```
+
+### Step 3: Apply and verify
+```bash
+kubectl apply -f /opt/course/21/peer-auth.yaml
+
+# Verify mTLS is enforced
+istioctl x authz check <pod-name> -n secure-ns
+```
+
+### Step 4: Cluster-wide mTLS (optional)
+```yaml
+# /opt/course/21/cluster-mtls.yaml
+apiVersion: security.istio.io/v1beta1
+kind: PeerAuthentication
+metadata:
+  name: default
+  namespace: istio-system    # Applies cluster-wide
+spec:
+  mtls:
+    mode: STRICT
+```
+
+---
+
+## mTLS Modes
+
+| Mode | Description |
+|------|-------------|
+| `STRICT` | Only mTLS traffic allowed |
+| `PERMISSIVE` | Accept both mTLS and plaintext |
+| `DISABLE` | No mTLS |
+
+---
+
+# 22. Base Image Security
+
+## Theory
+Container images should be minimal to reduce attack surface. Smaller images have fewer vulnerabilities and faster pull times.
+
+**Best Practices:**
+- Use distroless or scratch base images
+- Use multi-stage builds
+- Pin image versions (never use `latest`)
+- Scan images before deployment
+
+---
+
+## Steps: Create Minimal Images
+
+### Multi-stage Dockerfile example
+```dockerfile
+# /opt/course/22/Dockerfile
+# Build stage
+FROM golang:1.21 AS builder
+WORKDIR /app
+COPY . .
+RUN CGO_ENABLED=0 GOOS=linux go build -o myapp
+
+# Final stage - minimal image
+FROM gcr.io/distroless/static:nonroot
+COPY --from=builder /app/myapp /
+USER nonroot:nonroot
+ENTRYPOINT ["/myapp"]
+```
+
+### Compare image sizes
+```bash
+# Build and compare
+docker build -t myapp:distroless -f Dockerfile.distroless .
+docker build -t myapp:alpine -f Dockerfile.alpine .
+docker build -t myapp:ubuntu -f Dockerfile.ubuntu .
+
+# Check sizes
+docker images | grep myapp
+# myapp:distroless    ~5MB
+# myapp:alpine        ~15MB
+# myapp:ubuntu        ~150MB
+```
+
+### Scan for vulnerabilities
+```bash
+trivy image --severity HIGH,CRITICAL myapp:distroless
+trivy image --severity HIGH,CRITICAL myapp:ubuntu
+# Distroless will have far fewer vulnerabilities
+```
+
+---
+
+## Base Image Comparison
+
+| Base Image | Size | Use Case |
+|------------|------|----------|
+| `scratch` | 0 MB | Static binaries only |
+| `gcr.io/distroless/static` | ~2 MB | Static binaries, no shell |
+| `gcr.io/distroless/base` | ~20 MB | Dynamic binaries |
+| `alpine` | ~5 MB | Need shell/package manager |
+| `ubuntu` | ~70 MB | Full OS (avoid in production) |
+
+---
+
+# 23. SBOM (Software Bill of Materials)
+
+## Theory
+An **SBOM** is a complete inventory of software components in an image. It helps track dependencies and identify vulnerabilities.
+
+**Tools:**
+- **Syft** - Generate SBOMs
+- **Grype** - Scan SBOMs for vulnerabilities
+- **Trivy** - Can also generate SBOMs
+
+---
+
+## Steps: Generate and Analyze SBOM
+
+### Step 1: Generate SBOM with Syft
+```bash
+# Generate SBOM in SPDX format
+syft nginx:alpine -o spdx-json > /opt/course/23/nginx-sbom.json
+
+# Generate SBOM in CycloneDX format
+syft nginx:alpine -o cyclonedx-json > /opt/course/23/nginx-sbom-cdx.json
+```
+
+### Step 2: Scan SBOM for vulnerabilities
+```bash
+# Use Grype to scan the SBOM
+grype sbom:/opt/course/23/nginx-sbom.json
+
+# Or scan with severity filter
+grype sbom:/opt/course/23/nginx-sbom.json --only-fixed --fail-on high
+```
+
+### Step 3: Generate SBOM with Trivy
+```bash
+trivy image --format spdx-json -o /opt/course/23/trivy-sbom.json nginx:alpine
+```
+
+---
+
+## SBOM Formats
+
+| Format | Description |
+|--------|-------------|
+| SPDX | Linux Foundation standard |
+| CycloneDX | OWASP standard |
+| Syft JSON | Anchore native format |
+
+---
+
+# 24. Image Signing & Verification (Cosign)
+
+## Theory
+**Image signing** ensures images haven't been tampered with. **Cosign** (part of Sigstore) is the standard tool for signing and verifying container images.
+
+**Why Sign Images:**
+- Verify image authenticity
+- Ensure supply chain integrity
+- Meet compliance requirements
+
+---
+
+## Steps: Sign and Verify Images
+
+### Step 1: Generate key pair
+```bash
+cosign generate-key-pair
+
+# Creates:
+# - cosign.key (private key - keep secret!)
+# - cosign.pub (public key - distribute)
+```
+
+### Step 2: Sign an image
+```bash
+# Sign image with private key
+cosign sign --key cosign.key myregistry.io/myapp:v1.0
+
+# Sign with annotations
+cosign sign --key cosign.key \
+  -a "author=security-team" \
+  -a "commit=$(git rev-parse HEAD)" \
+  myregistry.io/myapp:v1.0
+```
+
+### Step 3: Verify signature
+```bash
+# Verify with public key
+cosign verify --key cosign.pub myregistry.io/myapp:v1.0
+
+# Verify and show annotations
+cosign verify --key cosign.pub myregistry.io/myapp:v1.0 | jq .
+```
+
+### Step 4: Keyless signing (recommended)
+```bash
+# Sign without managing keys (uses OIDC identity)
+COSIGN_EXPERIMENTAL=1 cosign sign myregistry.io/myapp:v1.0
+
+# Verify keyless signature
+COSIGN_EXPERIMENTAL=1 cosign verify myregistry.io/myapp:v1.0
+```
+
+---
+
+## Enforce Signed Images with Policy
+
+```yaml
+# Use with Kyverno or OPA/Gatekeeper to enforce signed images
+apiVersion: kyverno.io/v1
+kind: ClusterPolicy
+metadata:
+  name: verify-image-signature
+spec:
+  validationFailureAction: enforce
+  rules:
+    - name: verify-signature
+      match:
+        resources:
+          kinds:
+            - Pod
+      verifyImages:
+        - image: "myregistry.io/*"
+          key: |-
+            -----BEGIN PUBLIC KEY-----
+            <your-cosign-public-key>
+            -----END PUBLIC KEY-----
+```
+
+---
+
+# 25. KubeLinter Static Analysis
+
+## Theory
+**KubeLinter** is a static analysis tool that checks Kubernetes manifests for security misconfigurations and best practices. It complements Kubesec with additional checks.
+
+---
+
+## Steps: Scan with KubeLinter
+
+### Step 1: Scan manifests
+```bash
+# Scan a single file
+kube-linter lint /opt/course/25/deployment.yaml
+
+# Scan a directory
+kube-linter lint /opt/course/25/manifests/
+
+# Scan with specific checks
+kube-linter lint --include "no-read-only-root-fs,run-as-non-root" deployment.yaml
+```
+
+### Step 2: Common security checks
+```bash
+# List all available checks
+kube-linter checks list
+
+# Key security checks:
+# - no-read-only-root-fs
+# - run-as-non-root
+# - privilege-escalation-container
+# - sensitive-host-mounts
+# - writable-host-mount
+```
+
+### Step 3: Fix issues and rescan
+```yaml
+# /opt/course/25/secure-deployment.yaml
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: secure-app
+spec:
+  template:
+    spec:
+      containers:
+        - name: app
+          image: nginx:alpine
+          securityContext:
+            runAsNonRoot: true
+            readOnlyRootFilesystem: true
+            allowPrivilegeEscalation: false
+          resources:
+            limits:
+              memory: "128Mi"
+              cpu: "500m"
+```
+
+### Step 4: Verify no issues
+```bash
+kube-linter lint /opt/course/25/secure-deployment.yaml
+# No lint errors found!
+```
+
+---
+
+## KubeLinter vs Kubesec
+
+| Tool | Focus | Output |
+|------|-------|--------|
+| Kubesec | Security scoring | Numeric score |
+| KubeLinter | Best practices | Pass/fail checks |
+
+**Use both** for comprehensive analysis.
+
+---
+
+# 26. OPA Gatekeeper (Policy Enforcement)
+
+## Theory
+**OPA Gatekeeper** enforces custom policies on Kubernetes resources. It uses the Open Policy Agent (OPA) to validate admission requests.
+
+**Use Cases:**
+- Enforce allowed registries
+- Require labels on resources
+- Block privileged containers
+- Enforce resource limits
+
+---
+
+## Steps: Enforce Allowed Registries
+
+### Step 1: Verify Gatekeeper is installed
+```bash
+kubectl get pods -n gatekeeper-system
+```
+
+### Step 2: Create ConstraintTemplate
+```yaml
+# /opt/course/26/allowed-repos-template.yaml
+apiVersion: templates.gatekeeper.sh/v1
+kind: ConstraintTemplate
+metadata:
+  name: k8sallowedrepos
+spec:
+  crd:
+    spec:
+      names:
+        kind: K8sAllowedRepos
+      validation:
+        openAPIV3Schema:
+          type: object
+          properties:
+            repos:
+              type: array
+              items:
+                type: string
+  targets:
+    - target: admission.k8s.gatekeeper.sh
+      rego: |
+        package k8sallowedrepos
+        violation[{"msg": msg}] {
+          container := input.review.object.spec.containers[_]
+          not startswith(container.image, input.parameters.repos[_])
+          msg := sprintf("container <%v> image <%v> not from allowed registry", [container.name, container.image])
+        }
+```
+
+### Step 3: Create Constraint
+```yaml
+# /opt/course/26/allowed-repos-constraint.yaml
+apiVersion: constraints.gatekeeper.sh/v1beta1
+kind: K8sAllowedRepos
+metadata:
+  name: require-internal-registry
+spec:
+  match:
+    kinds:
+      - apiGroups: [""]
+        kinds: ["Pod"]
+    namespaces: ["production"]
+  parameters:
+    repos:
+      - "myregistry.io/"
+      - "gcr.io/my-project/"
+```
+
+### Step 4: Apply and test
+```bash
+kubectl apply -f /opt/course/26/allowed-repos-template.yaml
+kubectl apply -f /opt/course/26/allowed-repos-constraint.yaml
+
+# Test - should be denied
+kubectl run test --image=docker.io/nginx -n production
+# Error: container <test> image <docker.io/nginx> not from allowed registry
+
+# Test - should be allowed
+kubectl run test --image=myregistry.io/nginx -n production
+# pod/test created
+```
+
+---
+
+## Common Gatekeeper Policies
+
+| Policy | Purpose |
+|--------|---------|
+| Allowed Repos | Restrict image registries |
+| Required Labels | Enforce labeling standards |
+| Block Privileged | Prevent privileged containers |
+| Resource Limits | Require CPU/memory limits |
+| Block NodePort | Prevent NodePort services |
 
 ---
 
