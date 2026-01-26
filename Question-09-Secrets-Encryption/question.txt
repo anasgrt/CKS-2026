@@ -15,7 +15,7 @@ Task:
 
 4. Wait for API server to restart
 
-5. Create namespace 'secrets-ns' and a test secret to verify encryption
+5. Create a test secret named "test-secret" to verify encryption
 
 6. Verify the secret is encrypted in etcd (not stored in plaintext)
 
