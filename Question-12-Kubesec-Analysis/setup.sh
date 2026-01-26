@@ -3,6 +3,26 @@
 
 set -e
 
+# Install kubesec if not present
+if ! command -v kubesec &> /dev/null; then
+    echo "Installing kubesec..."
+    # Download latest kubesec binary
+    curl -sSL https://github.com/controlplaneio/kubesec/releases/download/v2.14.0/kubesec_linux_amd64.tar.gz -o /tmp/kubesec.tar.gz
+    tar -xzf /tmp/kubesec.tar.gz -C /tmp
+    sudo mv /tmp/kubesec /usr/local/bin/
+    sudo chmod +x /usr/local/bin/kubesec
+    rm -f /tmp/kubesec.tar.gz
+    echo "kubesec installed successfully."
+fi
+
+# Verify kubesec is working
+if command -v kubesec &> /dev/null; then
+    echo "kubesec version: $(kubesec version 2>/dev/null || echo 'installed')"
+else
+    echo "WARNING: kubesec installation may have failed. You can use Docker instead:"
+    echo "  docker run -i kubesec/kubesec:512c5e0 scan /dev/stdin < <manifest.yaml>"
+fi
+
 # Create namespace
 kubectl create namespace kubesec-ns --dry-run=client -o yaml | kubectl apply -f -
 
