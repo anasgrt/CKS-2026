@@ -1,16 +1,19 @@
 #!/bin/bash
 # Verify Question 13 - Falco Rules
+# All checks run on node01 where Falco is configured
 
+echo "Checking Falco rule configuration on node01..."
+echo ""
+
+# Run all checks on node01 via SSH
+ssh node01 bash << 'REMOTE_SCRIPT'
 GREEN='\033[0;32m'
 RED='\033[0;31m'
 NC='\033[0m'
 
 PASS=true
 
-echo "Checking Falco rule configuration..."
-echo ""
-
-# Check custom rule file exists (either in /etc/falco or local copy)
+# Check custom rule file exists
 RULE_FILE=""
 if [ -f "/etc/falco/rules.d/shell-detect.yaml" ]; then
     RULE_FILE="/etc/falco/rules.d/shell-detect.yaml"
@@ -91,7 +94,7 @@ if [ -n "$RULE_FILE" ]; then
     fi
 fi
 
-# Check container ID saved
+# Check container ID saved (on node01)
 if [ -f "/opt/course/13/container-id.txt" ]; then
     echo -e "${GREEN}✓ Container ID saved${NC}"
 else
@@ -99,7 +102,7 @@ else
     PASS=false
 fi
 
-# Check falco alert log
+# Check falco alert log (on node01)
 if [ -f "/opt/course/13/falco-alert.txt" ]; then
     echo -e "${GREEN}✓ Falco alert log saved${NC}"
 else
@@ -112,3 +115,6 @@ if $PASS; then
 else
     exit 1
 fi
+REMOTE_SCRIPT
+
+exit $?

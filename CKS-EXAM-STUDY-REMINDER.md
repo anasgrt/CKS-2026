@@ -1159,12 +1159,126 @@ kubesec scan /opt/course/12/secure-deploy.yaml > /opt/course/12/kubesec-fixed.js
 - Unexpected network connections
 - Privilege escalation attempts
 
-**Rule Components:**
-- `rule`: Name of the rule
-- `desc`: Description
-- `condition`: When to trigger (uses Sysdig syntax)
-- `output`: What to log
-- `priority`: Severity level
+**Deployment Options:**
+
+| Method                | Where                              | CKS Exam                                         |
+|-----------------------|------------------------------------|--------------------------------------------------|
+| **Service (systemd)** | Specific node (e.g., `node01`)     | Common - SSH to node, manage with `systemctl`    |
+| **DaemonSet (Helm)**  | All nodes (including control plane)| Rare - interact via `kubectl`                    |
+
+> **CKS Exam Note:** Falco is typically pre-installed as a **service on a worker node** (e.g., `node01`). The question will tell you which node to SSH into. All Falco tasks (rules, logs, restarts) are performed on that specific node.
+
+---
+
+## Quick Reference - Rule Structure
+
+```text
+┌────────────────────────────────────────────────────────────────────┐
+│  1. LIST    ──►  2. MACRO   ──►  3. RULE                          │
+│  (data)          (reusable       (detection + alert)               │
+│                   condition)                                       │
+└────────────────────────────────────────────────────────────────────┘
+
+ORDER MATTERS: Define lists first, then macros, then rules
+All components go in ONE YAML file (in /etc/falco/rules.d/)
+```
+
+---
+
+## Syntax Cheat Sheet
+
+### LIST
+
+```yaml
+- list: <name>
+  items: [item1, item2, item3]
+```
+
+### MACRO
+```yaml
+- macro: <name>
+  condition: <boolean_expression>
+```
+
+### RULE (5 required fields)
+```yaml
+- rule: <name>
+  desc: <description>
+  condition: <expression_or_macro>
+  output: <message with %fields>
+  priority: <LEVEL>
+```
+
+---
+
+## Common Macros (Memorize These!)
+
+```yaml
+# Detect new process execution
+- macro: spawned_process
+  condition: evt.type in (execve, execveat)
+
+# Detect if event is in a container (not host)
+- macro: container
+  condition: container.id != host
+```
+
+---
+
+## Operators
+
+| Type | Operators |
+|------|-----------|
+| Logical | `and`, `or`, `not` |
+| Compare | `=`, `!=`, `<`, `>`, `<=`, `>=` |
+| String | `contains`, `startswith`, `endswith` |
+| List | `in`, `intersects` |
+| Other | `exists`, `glob`, `regex` |
+
+---
+
+## Output Fields (use % prefix)
+
+| Category | Fields |
+|----------|--------|
+| Process | `%proc.name`, `%proc.cmdline`, `%proc.pid`, `%proc.pname` |
+| User | `%user.name`, `%user.uid` |
+| Container | `%container.id`, `%container.name`, `%container.image` |
+| Kubernetes | `%k8s.pod.name`, `%k8s.ns.name` |
+| File | `%fd.name` |
+
+---
+
+## Priority Levels (low to high)
+
+```text
+DEBUG → INFORMATIONAL → NOTICE → WARNING → ERROR → CRITICAL → ALERT → EMERGENCY
+```
+
+---
+
+## File Locations
+
+| Path | Purpose |
+|------|---------|
+| `/etc/falco/rules.d/*.yaml` | Custom rules (put your rules here!) |
+| `/etc/falco/falco.yaml` | Main config file |
+| `/etc/falco/falco_rules.yaml` | Default rules (don't modify) |
+
+---
+
+## Essential Commands
+
+```bash
+# Restart Falco
+sudo systemctl restart falco-modern-bpf
+
+# View Falco logs
+sudo journalctl -u falco-modern-bpf -f
+
+# Filter for specific rule
+sudo journalctl -u falco-modern-bpf | grep "Shell"
+```
 
 ---
 
@@ -1178,6 +1292,16 @@ ssh node01
 ### Step 2: Create custom rule file
 ```yaml
 # /etc/falco/rules.d/shell-detect.yaml
+
+# Macro: spawned_process
+- macro: spawned_process
+  condition: evt.type in (execve, execveat)
+
+# Macro: container
+- macro: container
+  condition: container.id != host
+
+# Rule: Shell Spawned in Container
 - rule: Shell Spawned in Container
   desc: Detect shell processes spawned inside containers
   condition: >
@@ -1194,7 +1318,7 @@ ssh node01
 
 ### Step 3: Restart Falco
 ```bash
-sudo systemctl restart falco
+sudo systemctl restart falco-modern-bpf
 ```
 
 ### Step 4: Trigger the rule
@@ -1206,10 +1330,10 @@ kubectl exec -it <pod-name> -- /bin/sh
 ### Step 5: Check Falco logs
 ```bash
 # On node01
-sudo journalctl -u falco | grep "Shell Spawned"
+sudo journalctl -u falco-modern-bpf | grep "Shell"
 
 # Or tail the log
-sudo tail -f /var/log/falco.log | grep -i shell
+sudo journalctl -u falco-modern-bpf -f
 ```
 
 ### Step 6: Get container ID
@@ -1220,36 +1344,6 @@ sudo crictl ps | grep <pod-name>
 # Save container ID
 echo "<container-id>" > /opt/course/13/container-id.txt
 ```
-
----
-
-## Falco Macros Quick Reference
-
-| Macro | Meaning |
-|-------|---------|
-| `spawned_process` | New process created |
-| `container` | Event from container (not host) |
-| `proc.name` | Process name |
-| `proc.cmdline` | Full command line |
-| `user.name` | User that ran the command |
-| `container.name` | Container name |
-| `k8s.pod.name` | Kubernetes pod name |
-| `k8s.ns.name` | Kubernetes namespace |
-
----
-
-## Falco Priority Levels
-
-| Priority | Use Case |
-|----------|----------|
-| EMERGENCY | System unusable |
-| ALERT | Immediate action needed |
-| CRITICAL | Critical condition |
-| ERROR | Error condition |
-| WARNING | Warning condition |
-| NOTICE | Normal but significant |
-| INFO | Informational |
-| DEBUG | Debug messages |
 
 ---
 

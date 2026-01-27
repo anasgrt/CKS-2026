@@ -1,6 +1,89 @@
 #!/bin/bash
 # Solution for Question 13 - Falco Rules
 
+###############################################################################
+#                       FALCO RULES - QUICK REFERENCE                         #
+###############################################################################
+#
+# STRUCTURE: All in ONE YAML file (in /etc/falco/rules.d/)
+#
+#   ┌────────────────────────────────────────────────────────────────────┐
+#   │  1. LIST    ──►  2. MACRO   ──►  3. RULE                          │
+#   │  (data)          (reusable       (detection + alert)               │
+#   │                   condition)                                       │
+#   └────────────────────────────────────────────────────────────────────┘
+#
+#   ORDER MATTERS: Define lists first, then macros, then rules
+#
+###############################################################################
+# SYNTAX CHEAT SHEET
+###############################################################################
+#
+# LIST:
+#   - list: <name>
+#     items: [item1, item2, item3]
+#
+# MACRO:
+#   - macro: <name>
+#     condition: <boolean_expression>
+#
+# RULE (5 required fields):
+#   - rule: <name>
+#     desc: <description>
+#     condition: <expression_or_macro>
+#     output: <message with %fields>
+#     priority: <LEVEL>
+#
+###############################################################################
+# COMMON MACROS (memorize these)
+###############################################################################
+#
+#   - macro: spawned_process
+#     condition: evt.type in (execve, execveat)
+#
+#   - macro: container
+#     condition: container.id != host
+#
+###############################################################################
+# OPERATORS
+###############################################################################
+#
+#   Logical:  and, or, not
+#   Compare:  =, !=, <, >, <=, >=
+#   String:   contains, startswith, endswith
+#   List:     in, intersects
+#   Other:    exists, glob, regex
+#
+###############################################################################
+# OUTPUT FIELDS (use % prefix)
+###############################################################################
+#
+#   %user.name       %proc.name       %proc.cmdline
+#   %container.id    %container.name  %container.image
+#   %k8s.pod.name    %k8s.ns.name     %fd.name
+#
+###############################################################################
+# PRIORITY LEVELS (low to high)
+###############################################################################
+#
+#   DEBUG, INFORMATIONAL, NOTICE, WARNING, ERROR, CRITICAL, ALERT, EMERGENCY
+#
+###############################################################################
+# FILE LOCATIONS
+###############################################################################
+#
+#   Custom rules:  /etc/falco/rules.d/*.yaml
+#   Config file:   /etc/falco/falco.yaml
+#
+###############################################################################
+# COMMANDS
+###############################################################################
+#
+#   systemctl restart falco-modern-bpf    # Restart Falco
+#   journalctl -u falco-modern-bpf -f     # View logs
+#
+###############################################################################
+
 echo "Solution: Create custom Falco rule"
 echo ""
 echo "Step 1: SSH to node01 and create the custom rule file"
@@ -82,6 +165,6 @@ echo "- spawned_process uses evt.type in (execve, execveat)"
 echo "- Note: evt.dir is DEPRECATED in modern Falco - do not use it"
 echo "- container macro filters to only container events"
 echo "- Output fields use Falco field syntax like %user.name, %k8s.pod.name"
-echo "- Priority levels: DEBUG, INFO, NOTICE, WARNING, ERROR, CRITICAL, ALERT, EMERGENCY"
+echo "- Priority levels: DEBUG, INFORMATIONAL, NOTICE, WARNING, ERROR, CRITICAL, ALERT, EMERGENCY"
 echo "- Falco runs as systemd service (falco-modern-bpf) on node01"
 echo "- Use journalctl -u falco-modern-bpf to view logs"

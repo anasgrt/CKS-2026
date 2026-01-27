@@ -8,6 +8,7 @@ investigate this behavior.
 
 Task:
 1. Falco is installed on node 'node01'. SSH to this node.
+   All the following steps must be performed on node01.
 
 2. Create a custom Falco rule file at /etc/falco/rules.d/shell-detect.yaml that:
    - Detects when shell processes (bash, sh, ash, dash, zsh) are spawned inside containers
@@ -23,7 +24,7 @@ Task:
 5. Check Falco logs for the alert
 
 6. Identify the container ID where the shell was spawned
-   Save the container ID to: /opt/course/13/container-id.txt
+   Save the container ID to: /opt/course/13/container-id.txt (on node01)
 
-7. Save the Falco alert output to: /opt/course/13/falco-alert.txt
+7. Save the Falco alert output to: /opt/course/13/falco-alert.txt (on node01)
 
