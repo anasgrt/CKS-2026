@@ -9,10 +9,14 @@ Task:
 1. An image policy webhook service is deployed at:
    https://image-policy-webhook.image-policy.svc:443
 
-   The CA certificate is at: /etc/kubernetes/pki/image-policy/ca.crt
+   The following certificates are available:
+   - CA certificate: /etc/kubernetes/pki/image-policy/ca.crt
+   - Client certificate: /etc/kubernetes/pki/image-policy/client.crt
+   - Client key: /etc/kubernetes/pki/image-policy/client.key
 
 2. Create a kubeconfig file for the webhook at:
    /etc/kubernetes/admission/image-policy-kubeconfig.yaml
+   - Use user "api-server" with the client certificate and key for authentication
 
 3. Create an admission configuration at:
    /etc/kubernetes/admission/admission-config.yaml

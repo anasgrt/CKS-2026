@@ -15,11 +15,11 @@ clusters:
     cluster:
       server: https://image-policy-webhook.image-policy.svc:443
       certificate-authority: /etc/kubernetes/pki/image-policy/ca.crt
-contexts:
-  - name: image-policy
-    context:
-      cluster: image-policy-webhook
-current-context: image-policy
+users:
+  - name: api-server
+    user:
+      client-certificate: /etc/kubernetes/pki/image-policy/client.crt
+      client-key: /etc/kubernetes/pki/image-policy/client.key
 YAML
 EOF
 

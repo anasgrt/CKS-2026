@@ -43,6 +43,21 @@ if [ -f "/opt/course/16/image-policy-kubeconfig.yaml" ]; then
         echo -e "${RED}✗ Kubeconfig should point to image-policy-webhook.image-policy service${NC}"
         PASS=false
     fi
+
+    if grep -q "name: api-server" /opt/course/16/image-policy-kubeconfig.yaml; then
+        echo -e "${GREEN}✓ Kubeconfig has user 'api-server' configured${NC}"
+    else
+        echo -e "${RED}✗ Kubeconfig should have user 'api-server' configured${NC}"
+        PASS=false
+    fi
+
+    if grep -q "client-certificate:" /opt/course/16/image-policy-kubeconfig.yaml && \
+       grep -q "client-key:" /opt/course/16/image-policy-kubeconfig.yaml; then
+        echo -e "${GREEN}✓ Kubeconfig has client certificate and key configured${NC}"
+    else
+        echo -e "${RED}✗ Kubeconfig should have client-certificate and client-key configured${NC}"
+        PASS=false
+    fi
 else
     echo -e "${RED}✗ Webhook kubeconfig not found${NC}"
     PASS=false
