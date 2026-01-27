@@ -39,6 +39,8 @@ complete -o default -F __start_kubectl k
 
 # 1. NetworkPolicy - Default Deny
 
+NetworkPolicies control pod-to-pod traffic. A default deny policy blocks ALL ingress and egress traffic unless explicitly allowed. Essential first step for zero-trust networking.
+
 > **Step 1:** Create namespace
 > ```
 > kubectl create ns <ns>
@@ -67,6 +69,8 @@ spec:
 
 # 2. NetworkPolicy - Allow Specific
 
+After default deny, create allow policies for legitimate traffic. Use pod labels to select sources and destinations. Always include DNS egress (port 53) or pods can't resolve services.
+
 > **Step 1:** Identify source/dest pods (labels)
 
 > **Step 2:** Create policy with:
@@ -94,6 +98,8 @@ egress:
 ---
 
 # 3. CIS Benchmark / kube-bench
+
+CIS benchmarks define security best practices for Kubernetes. kube-bench scans your cluster against these standards and reports failures. Fix findings in API server and kubelet configs.
 
 > **Step 1:** SSH and run kube-bench
 > ```
@@ -131,6 +137,8 @@ egress:
 ---
 
 # 4. RBAC - Role & RoleBinding
+
+RBAC controls who can do what in the cluster. Roles define permissions (verbs on resources), RoleBindings attach roles to users/ServiceAccounts. Namespace-scoped.
 
 > **Step 1:** Create ServiceAccount
 > ```
@@ -170,6 +178,8 @@ egress:
 
 # 5. RBAC - ClusterRole (cluster-wide)
 
+ClusterRoles grant permissions across ALL namespaces or on cluster-scoped resources (nodes, PVs). Use ClusterRoleBinding to assign. Be careful - these are powerful.
+
 > **Step 1:** Create ClusterRole
 > ```
 > kubectl create clusterrole <cr> \
@@ -194,6 +204,8 @@ egress:
 
 # 6. ServiceAccount Security
 
+ServiceAccounts provide pod identity. By default, tokens are auto-mounted giving pods API access. Disable auto-mount and use minimal RBAC for least privilege.
+
 > **Step 1:** Create SA with no auto-mount
 > ```yaml
 > automountServiceAccountToken: false
@@ -215,6 +227,8 @@ egress:
 ---
 
 # 7. AppArmor Profiles
+
+AppArmor is a Linux kernel security module that restricts program capabilities. Profiles must be loaded on each node before pods can use them. Kubernetes 1.30+ uses native field.
 
 > **Step 1:** SSH to node
 > ```
@@ -251,6 +265,8 @@ egress:
 
 # 8. Seccomp Profiles
 
+Seccomp filters system calls a container can make. RuntimeDefault blocks dangerous syscalls. Custom profiles go in `/var/lib/kubelet/seccomp/`. Required for PSA restricted.
+
 > **Option 1: RuntimeDefault (easiest)**
 > ```yaml
 > spec:
@@ -275,6 +291,8 @@ egress:
 ---
 
 # 9. Pod Security Admission (PSA)
+
+PSA enforces security standards at namespace level via labels. Restricted level requires non-root, seccomp, dropped capabilities, and no privilege escalation. Replaces PodSecurityPolicy.
 
 > **Step 1:** Label namespace
 > ```
@@ -303,6 +321,8 @@ egress:
 ---
 
 # 10. Secrets Encryption at Rest
+
+By default, Secrets are stored base64-encoded (not encrypted) in etcd. Enable encryption at rest using aescbc provider. Encryption provider must come BEFORE identity in config.
 
 > **Step 1:** Generate key
 > ```
@@ -337,6 +357,8 @@ egress:
 
 # 11. SecurityContext Hardening
 
+SecurityContext sets security settings at pod/container level. Key settings: runAsNonRoot, readOnlyRootFilesystem, drop ALL capabilities, and disable privilege escalation.
+
 > **Add to Pod/Container spec:**
 > ```yaml
 > spec:
@@ -359,6 +381,8 @@ egress:
 ---
 
 # 12. Trivy Image Scanning
+
+Trivy scans container images for known vulnerabilities (CVEs). Focus on HIGH and CRITICAL severity. Compare images to choose the one with fewer vulnerabilities.
 
 > **Step 1:** Scan for HIGH/CRITICAL
 > ```
@@ -384,6 +408,8 @@ egress:
 
 # 13. Kubesec Analysis
 
+Kubesec analyzes Kubernetes manifests and assigns a security score. Higher score = more secure. Add security features like runAsNonRoot and resource limits to improve score.
+
 > **Step 1:** Scan manifest
 > ```
 > kubesec scan <file>.yaml
@@ -403,6 +429,8 @@ egress:
 ---
 
 # 14. Falco Runtime Security
+
+Falco detects abnormal behavior at runtime using kernel-level monitoring. Custom rules go in `/etc/falco/rules.d/`. Alerts on shell spawns, file access, network connections, etc.
 
 > **Step 1:** SSH to node where Falco runs
 > ```
@@ -446,6 +474,8 @@ egress:
 
 # 15. Audit Logs
 
+Audit logs record all API requests for security analysis and compliance. Policy defines what to log (resources, verbs) and at what level (Metadata, Request, RequestResponse).
+
 > **Step 1:** Create audit policy
 > - Path: `/etc/kubernetes/audit-policy.yaml`
 > - level: `None` | `Metadata` | `Request` | `RequestResponse`
@@ -477,6 +507,8 @@ egress:
 
 # 16. RuntimeClass / gVisor
 
+RuntimeClass selects different container runtimes. gVisor provides kernel-level isolation by intercepting syscalls. Adds security layer between container and host kernel.
+
 > **Step 1:** Verify RuntimeClass exists
 > ```
 > kubectl get runtimeclass gvisor
@@ -503,6 +535,8 @@ egress:
 
 # 17. ImagePolicyWebhook
 
+ImagePolicyWebhook is an admission controller that validates images before pod creation. External webhook decides allow/deny. Set defaultAllow=false to deny if webhook is down.
+
 > **Step 1:** Create webhook kubeconfig
 > - Path: `/etc/kubernetes/admission/image-policy-kubeconfig.yaml`
 
@@ -520,6 +554,8 @@ egress:
 ---
 
 # 18. Binary Verification
+
+Verify Kubernetes binaries haven't been tampered with by comparing SHA checksums against official releases. Mismatch indicates compromised binary - potential supply chain attack.
 
 > **Step 1:** Get cluster version
 > ```
@@ -546,6 +582,8 @@ egress:
 
 # 19. Node Metadata Protection
 
+Cloud metadata service (169.254.169.254) exposes sensitive info like IAM credentials. Block pod access using NetworkPolicy egress rules to prevent SSRF attacks.
+
 > **Step 1:** Create NetworkPolicy to block `169.254.169.254/32`
 
 > **Step 2:** Policy structure
@@ -570,6 +608,8 @@ egress:
 ---
 
 # 20. Ingress TLS
+
+TLS encrypts traffic between clients and the Ingress controller. Store certificate and key in a TLS Secret, reference it in Ingress spec. HTTPS prevents traffic sniffing.
 
 > **Step 1:** Generate cert
 > ```
@@ -603,6 +643,8 @@ egress:
 ---
 
 # 21. OPA Gatekeeper (Policy Enforcement)
+
+Gatekeeper uses OPA (Open Policy Agent) to enforce custom policies via admission control. ConstraintTemplates define policy logic in Rego, Constraints apply them to resources.
 
 > **Step 1:** Verify Gatekeeper installed
 > ```
@@ -638,6 +680,8 @@ egress:
 
 # 22. SBOM (Software Bill of Materials)
 
+SBOM lists all components/dependencies in a container image. Enables vulnerability tracking and license compliance. Generate with Trivy in CycloneDX or SPDX format.
+
 > **Step 1:** Generate SBOM with Trivy
 > ```
 > trivy image --format cyclonedx -o sbom.json <image>
@@ -663,6 +707,8 @@ egress:
 ---
 
 # 23. KubeLinter (Static Analysis)
+
+KubeLinter statically analyzes Kubernetes manifests for security misconfigurations and best practices. Catches issues before deployment. Non-zero exit code for CI/CD integration.
 
 > **Step 1:** Scan manifest
 > ```
@@ -696,6 +742,8 @@ egress:
 ---
 
 # 24. Kubernetes Version Upgrade
+
+Regular upgrades patch security vulnerabilities. Upgrade one minor version at a time (never skip). Order: kubeadm first, then kubelet/kubectl. Drain nodes before upgrading.
 
 > **Step 1:** Drain control plane node
 > ```
@@ -735,6 +783,8 @@ egress:
 ---
 
 # 25. mTLS / Pod-to-Pod Encryption
+
+mTLS encrypts traffic between pods with mutual authentication. Service meshes like Istio or CNIs like Cilium provide this. STRICT mode enforces mTLS-only communication.
 
 ## ISTIO mTLS
 
