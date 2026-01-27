@@ -91,7 +91,7 @@ complete -o default -F __start_kubectl k
 │    - policyTypes: [Ingress, Egress]     │
 │    - NO rules = DENY ALL                │
 │                                         │
-│ 3. kubectl apply -f <file>               │
+│ 3. kubectl apply -f <file>              │
 │ 4. kubectl get netpol -n <ns>           │
 └─────────────────────────────────────────┘
 ```
@@ -116,7 +116,7 @@ spec:
 │    - ingress.from: source pods          │
 │    - egress.to: dest pods               │
 │    - ALWAYS add DNS (port 53 UDP/TCP)   │
-│ 3. kubectl apply -f <file>               │
+│ 3. kubectl apply -f <file>              │
 │ 4. Test: kubectl exec <pod> -- wget     │
 └─────────────────────────────────────────┘
 ```
@@ -143,11 +143,11 @@ egress:
 │    vim /etc/kubernetes/manifests/       │
 │        kube-apiserver.yaml              │
 │    - --anonymous-auth=false             │
-│    - --profiling=false                   │
+│    - --profiling=false                  │
 │    - --authorization-mode=Node,RBAC     │
 │                                         │
 │ 4. Fix kubelet (on nodes):              │
-│    vim /var/lib/kubelet/config.yaml      │
+│    vim /var/lib/kubelet/config.yaml     │
 │    authentication:                      │
 │      anonymous:                         │
 │        enabled: false                   │
