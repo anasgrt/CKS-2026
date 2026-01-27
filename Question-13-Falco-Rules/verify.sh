@@ -13,14 +13,19 @@ NC='\033[0m'
 
 PASS=true
 
+# Check Falco service is running
+if systemctl is-active --quiet falco-modern-bpf.service || systemctl is-active --quiet falco; then
+    echo -e "${GREEN}✓ Falco service is running${NC}"
+else
+    echo -e "${RED}✗ Falco service is not running${NC}"
+    PASS=false
+fi
+
 # Check custom rule file exists
 RULE_FILE=""
 if [ -f "/etc/falco/rules.d/shell-detect.yaml" ]; then
     RULE_FILE="/etc/falco/rules.d/shell-detect.yaml"
     echo -e "${GREEN}✓ Custom rule file exists at /etc/falco/rules.d/shell-detect.yaml${NC}"
-elif [ -f "/opt/course/13/shell-detect.yaml" ]; then
-    RULE_FILE="/opt/course/13/shell-detect.yaml"
-    echo -e "${GREEN}✓ Custom rule file exists at /opt/course/13/shell-detect.yaml${NC}"
 else
     echo -e "${RED}✗ Custom rule not found at /etc/falco/rules.d/shell-detect.yaml${NC}"
     PASS=false

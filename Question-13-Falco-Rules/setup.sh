@@ -76,8 +76,8 @@ kubectl create namespace falco-ns --dry-run=client -o yaml | kubectl apply -f -
 # Create test pod
 kubectl run test-pod --image=nginx --namespace=falco-ns --restart=Never --dry-run=client -o yaml | kubectl apply -f - 2>/dev/null || true
 
-# Create output directory
-mkdir -p /opt/course/13
+# Create output directory on node01 (where results should be saved per the question)
+ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -o LogLevel=ERROR node01 'mkdir -p /opt/course/13' 2>/dev/null || true
 
 echo ""
 echo "✓ Environment ready!"
