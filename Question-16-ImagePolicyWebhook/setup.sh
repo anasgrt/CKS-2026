@@ -12,6 +12,79 @@ sudo mkdir -p /opt/course/16
 # Create admission directory
 sudo mkdir -p /etc/kubernetes/admission
 
+# ============================================
+# Deploy the external image policy webhook service
+# ============================================
+echo "Deploying external image-bouncer-webhook service..."
+
+# Create the namespace (using default for simplicity)
+kubectl apply -f - <<EOF
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: image-bouncer-webhook
+  namespace: default
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: image-bouncer-webhook
+  namespace: default
+  labels:
+    app: image-bouncer-webhook
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: image-bouncer-webhook
+  template:
+    metadata:
+      labels:
+        app: image-bouncer-webhook
+    spec:
+      serviceAccountName: image-bouncer-webhook
+      containers:
+      - name: image-bouncer-webhook
+        # Using a simple HTTPS echo server that returns allow for demo
+        # In production this would be kube-image-bouncer or similar
+        image: hashicorp/http-echo:alpine
+        args:
+        - "-listen=:1323"
+        - '-text={"apiVersion":"imagepolicy.k8s.io/v1alpha1","kind":"ImageReview","status":{"allowed":true}}'
+        ports:
+        - containerPort: 1323
+          protocol: TCP
+        resources:
+          limits:
+            memory: "64Mi"
+            cpu: "100m"
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: image-bouncer-webhook
+  namespace: default
+  labels:
+    app: image-bouncer-webhook
+spec:
+  selector:
+    app: image-bouncer-webhook
+  ports:
+  - port: 1323
+    targetPort: 1323
+    protocol: TCP
+  type: ClusterIP
+EOF
+
+echo "Waiting for image-bouncer-webhook deployment to be ready..."
+kubectl rollout status deployment/image-bouncer-webhook -n default --timeout=120s || true
+
+echo ""
+echo "Webhook service deployed:"
+kubectl get svc image-bouncer-webhook -n default
+echo ""
+
 # Create placeholder certificate files (in real exam these would be actual certs)
 # These simulate the pre-existing certificates the exam provides
 sudo bash -c 'cat > /etc/kubernetes/admission/external-cert.pem << EOF

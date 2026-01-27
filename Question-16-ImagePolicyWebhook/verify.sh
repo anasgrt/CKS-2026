@@ -16,6 +16,17 @@ echo "Verifying ImagePolicyWebhook Configuration"
 echo "=============================================="
 echo ""
 
+# Pre-check: Verify webhook service is running
+echo "Pre-check: External webhook service"
+if kubectl get svc image-bouncer-webhook -n default &>/dev/null; then
+    echo -e "${GREEN}✓ image-bouncer-webhook service exists in default namespace${NC}"
+else
+    echo -e "${RED}✗ image-bouncer-webhook service not found - run setup.sh first${NC}"
+    echo "The external webhook service must be deployed before verification."
+    exit 1
+fi
+echo ""
+
 # Check 1: kubeconf.yaml exists and has required content
 echo "Check 1: Kubeconfig file structure"
 if [ -f "/etc/kubernetes/admission/kubeconf.yaml" ]; then

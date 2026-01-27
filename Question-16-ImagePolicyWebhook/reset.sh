@@ -14,6 +14,12 @@ if [ -d "/etc/kubernetes/admission" ]; then
     sudo rm -rf /etc/kubernetes/admission
 fi
 
+# Remove the image-bouncer-webhook service and deployment
+echo "Removing image-bouncer-webhook service and deployment..."
+kubectl delete deployment image-bouncer-webhook -n default --ignore-not-found=true
+kubectl delete service image-bouncer-webhook -n default --ignore-not-found=true
+kubectl delete serviceaccount image-bouncer-webhook -n default --ignore-not-found=true
+
 # Restore API server manifest if backup exists
 if [ -f "/etc/kubernetes/manifests/kube-apiserver.yaml.bak" ]; then
     echo "Restoring API server manifest from backup..."
