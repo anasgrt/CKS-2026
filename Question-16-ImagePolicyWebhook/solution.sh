@@ -1,87 +1,241 @@
 #!/bin/bash
 # Solution for Question 16 - ImagePolicyWebhook
+# Based on real CKS exam patterns (2025/2026)
 
+echo "=============================================="
 echo "Solution: Configure ImagePolicyWebhook"
+echo "=============================================="
 echo ""
-echo "Step 1: Create kubeconfig for webhook"
+
+echo "STEP 1: Complete the kubeconfig file"
+echo "--------------------------------------"
+echo "Edit /etc/kubernetes/admission/kubeconf.yaml"
 echo ""
 
 cat << 'EOF'
-cat > /opt/course/16/image-policy-kubeconfig.yaml << 'YAML'
+# Complete kubeconf.yaml should look like:
+
+apiVersion: v1
+kind: Config
+
+# clusters refers to the remote webhook service
+clusters:
+- cluster:
+    certificate-authority: /etc/kubernetes/admission/external-cert.pem
+    server: https://image-bouncer-webhook.default.svc:1323/image_policy
+  name: image-checker
+
+contexts:
+- context:
+    cluster: image-checker
+    user: api-server
+  name: image-checker
+
+# CRITICAL: Set current-context
+current-context: image-checker
+
+preferences: {}
+
+# users refers to the API server's webhook configuration
+users:
+- name: api-server
+  user:
+    client-certificate: /etc/kubernetes/admission/apiserver-client-cert.pem
+    client-key: /etc/kubernetes/admission/apiserver-client-key.pem
+EOF
+
+echo ""
+echo "Command to apply:"
+echo ""
+cat << 'HEREDOC'
+sudo tee /etc/kubernetes/admission/kubeconf.yaml << 'KUBECONF'
 apiVersion: v1
 kind: Config
 clusters:
-  - name: image-policy-webhook
-    cluster:
-      server: https://image-policy-webhook.image-policy.svc:443
-      certificate-authority: /etc/kubernetes/pki/image-policy/ca.crt
+- cluster:
+    certificate-authority: /etc/kubernetes/admission/external-cert.pem
+    server: https://image-bouncer-webhook.default.svc:1323/image_policy
+  name: image-checker
+contexts:
+- context:
+    cluster: image-checker
+    user: api-server
+  name: image-checker
+current-context: image-checker
+preferences: {}
 users:
-  - name: api-server
-    user:
-      client-certificate: /etc/kubernetes/pki/image-policy/client.crt
-      client-key: /etc/kubernetes/pki/image-policy/client.key
-YAML
-EOF
+- name: api-server
+  user:
+    client-certificate: /etc/kubernetes/admission/apiserver-client-cert.pem
+    client-key: /etc/kubernetes/admission/apiserver-client-key.pem
+KUBECONF
+HEREDOC
 
 echo ""
-echo "Step 2: Create admission configuration"
+echo "STEP 2: Complete the admission configuration"
+echo "---------------------------------------------"
+echo "Edit /etc/kubernetes/admission/admission_config.yaml"
 echo ""
 
 cat << 'EOF'
-cat > /opt/course/16/admission-config.yaml << 'YAML'
+# Complete admission_config.yaml should look like:
+
 apiVersion: apiserver.config.k8s.io/v1
 kind: AdmissionConfiguration
 plugins:
-  - name: ImagePolicyWebhook
-    configuration:
-      imagePolicy:
-        kubeConfigFile: /etc/kubernetes/admission/image-policy-kubeconfig.yaml
-        allowTTL: 50
-        denyTTL: 50
-        retryBackoff: 500
-        defaultAllow: false
-YAML
+- name: ImagePolicyWebhook
+  configuration:
+    imagePolicy:
+      kubeConfigFile: /etc/kubernetes/admission/kubeconf.yaml
+      allowTTL: 50
+      denyTTL: 50
+      retryBackoff: 500
+      defaultAllow: false
 EOF
 
 echo ""
-echo "Step 3: Copy files to API server"
+echo "Command to apply:"
+echo ""
+cat << 'HEREDOC'
+sudo tee /etc/kubernetes/admission/admission_config.yaml << 'ADMISSIONCONF'
+apiVersion: apiserver.config.k8s.io/v1
+kind: AdmissionConfiguration
+plugins:
+- name: ImagePolicyWebhook
+  configuration:
+    imagePolicy:
+      kubeConfigFile: /etc/kubernetes/admission/kubeconf.yaml
+      allowTTL: 50
+      denyTTL: 50
+      retryBackoff: 500
+      defaultAllow: false
+ADMISSIONCONF
+HEREDOC
+
+echo ""
+echo "STEP 3: Configure the kube-apiserver"
+echo "-------------------------------------"
+echo "Edit /etc/kubernetes/manifests/kube-apiserver.yaml"
 echo ""
 
 cat << 'EOF'
-sudo mkdir -p /etc/kubernetes/admission
-sudo cp /opt/course/16/admission-config.yaml /etc/kubernetes/admission/
-sudo cp /opt/course/16/image-policy-kubeconfig.yaml /etc/kubernetes/admission/
-EOF
+# Add/modify these sections in kube-apiserver.yaml:
 
-echo ""
-echo "Step 4: Configure API server"
-echo ""
-
-cat << 'EOF'
-# Edit /etc/kubernetes/manifests/kube-apiserver.yaml
-# Add/modify these flags:
-
+# 1. Add to the command section (modify existing --enable-admission-plugins):
     - --enable-admission-plugins=NodeRestriction,ImagePolicyWebhook
-    - --admission-control-config-file=/etc/kubernetes/admission/admission-config.yaml
+    - --admission-control-config-file=/etc/kubernetes/admission/admission_config.yaml
 
-# Add volume mounts and volumes for the admission directory
+# 2. Enable the imagepolicy.k8s.io/v1alpha1 API (add or modify --runtime-config):
+    - --runtime-config=imagepolicy.k8s.io/v1alpha1=true
+
+# 3. Add to volumeMounts section:
+    - mountPath: /etc/kubernetes/admission
+      name: admission
+      readOnly: true
+
+# 4. Add to volumes section:
+  - hostPath:
+      path: /etc/kubernetes/admission
+      type: DirectoryOrCreate
+    name: admission
 EOF
 
 echo ""
-echo "Step 5: Test the configuration"
+echo "Manual steps:"
+echo ""
+cat << 'HEREDOC'
+# Edit the API server manifest:
+sudo vim /etc/kubernetes/manifests/kube-apiserver.yaml
+
+# Find the line with --enable-admission-plugins and modify it to include ImagePolicyWebhook:
+# Change FROM:
+#   - --enable-admission-plugins=NodeRestriction
+# TO:
+#   - --enable-admission-plugins=NodeRestriction,ImagePolicyWebhook
+
+# Add the admission-control-config-file flag:
+#   - --admission-control-config-file=/etc/kubernetes/admission/admission_config.yaml
+
+# Enable the imagepolicy.k8s.io/v1alpha1 API (add or modify --runtime-config):
+#   - --runtime-config=imagepolicy.k8s.io/v1alpha1=true
+# NOTE: If --runtime-config already exists, append with comma: api/all=true,imagepolicy.k8s.io/v1alpha1=true
+
+# Add volumeMount under spec.containers[0].volumeMounts:
+#   - mountPath: /etc/kubernetes/admission
+#     name: admission
+#     readOnly: true
+
+# Add volume under spec.volumes:
+#   - hostPath:
+#       path: /etc/kubernetes/admission
+#       type: DirectoryOrCreate
+#     name: admission
+
+# Save the file - API server will automatically restart
+HEREDOC
+
+echo ""
+echo "STEP 4: Wait for API server and verify"
+echo "---------------------------------------"
 echo ""
 
 cat << 'EOF'
-# Try to create a pod with untrusted image (should be denied)
-kubectl run test --image=docker.io/malicious/image
+# Wait for API server to restart (30-60 seconds)
+# Check if API server is responding:
+kubectl get nodes
 
-# If webhook denies, you'll see:
-# Error: admission webhook denied the request
+# Once API server is back, test pod creation:
+# Since we don't have a real webhook service running, pods will be DENIED
+# because defaultAllow: false
+
+kubectl run test-pod --image=nginx --dry-run=server
+
+# Expected output (webhook unavailable, defaultAllow=false):
+# Error from server (Forbidden): pods "test-pod" is forbidden:
+# Post "https://image-bouncer-webhook.default.svc:1323/image_policy":
+# dial tcp: lookup image-bouncer-webhook.default.svc: no such host
 EOF
 
 echo ""
-echo "Key Points:"
-echo "- defaultAllow: false is more secure (fail-closed)"
-echo "- Webhook must respond within timeout or default behavior applies"
-echo "- Use for enforcing signed images, registry allowlists, etc."
-echo "- Can be combined with ValidatingWebhookConfiguration for more flexibility"
+echo "STEP 5: Save copies to /opt/course/16/"
+echo "---------------------------------------"
+echo ""
+
+cat << 'HEREDOC'
+sudo mkdir -p /opt/course/16
+sudo cp /etc/kubernetes/admission/admission_config.yaml /opt/course/16/
+sudo cp /etc/kubernetes/admission/kubeconf.yaml /opt/course/16/
+HEREDOC
+
+echo ""
+echo "=============================================="
+echo "KEY POINTS FOR THE EXAM:"
+echo "=============================================="
+echo ""
+echo "1. The kubeconfig MUST have 'current-context' set - very common mistake!"
+echo ""
+echo "2. 'defaultAllow: false' is the secure setting (fail-closed):"
+echo "   - false = DENY pods if webhook unreachable (secure)"
+echo "   - true  = ALLOW pods if webhook unreachable (insecure)"
+echo ""
+echo "3. The ImagePolicyWebhook uses a kubeconfig-style file to configure:"
+echo "   - Which webhook server to contact (clusters.cluster.server)"
+echo "   - How to authenticate (users.user with client certs)"
+echo "   - Which CA to trust (clusters.cluster.certificate-authority)"
+echo ""
+echo "4. Volume mounts are REQUIRED for the API server to access:"
+echo "   - The admission config file"
+echo "   - The kubeconfig file"
+echo "   - The certificates"
+echo ""
+echo "5. After modifying the API server manifest:"
+echo "   - The kubelet automatically restarts the API server"
+echo "   - Wait 30-60 seconds before running kubectl commands"
+echo "   - Use 'crictl ps' to check if apiserver container is running"
+echo ""
+echo "6. If API server doesn't come back:"
+echo "   - Check logs: crictl logs \$(crictl ps -a | grep kube-apiserver | awk '{print \$1}')"
+echo "   - Common issues: typos in paths, missing volumes, YAML syntax errors"
+echo ""
+echo "Documentation: https://kubernetes.io/docs/reference/access-authn-authz/admission-controllers/#imagepolicywebhook"
+echo ""

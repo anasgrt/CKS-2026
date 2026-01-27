@@ -2,33 +2,51 @@ Weight: 6%
 Domain: Supply Chain Security (20%)
 
 Context:
-Images from untrusted registries must be blocked. Configure an admission controller
-to enforce image policy.
+A cluster requires that all images are validated by an external image policy webhook
+before pods are allowed to run. The external webhook service is already deployed but
+the API server is not yet configured to use it.
+
+The cluster uses ImagePolicyWebhook to restrict images. If the external webhook
+service cannot be reached, pod creation should be DENIED (fail-closed mode).
 
 Task:
-1. An image policy webhook service is deployed at:
-   https://image-policy-webhook.image-policy.svc:443
+The external image policy webhook service is available at:
+  https://image-bouncer-webhook.default.svc:1323/image_policy
 
-   The following certificates are available:
-   - CA certificate: /etc/kubernetes/pki/image-policy/ca.crt
-   - Client certificate: /etc/kubernetes/pki/image-policy/client.crt
-   - Client key: /etc/kubernetes/pki/image-policy/client.key
+An incomplete admission configuration has been created at:
+  /etc/kubernetes/admission/admission_config.yaml
 
-2. Create a kubeconfig file for the webhook at:
-   /etc/kubernetes/admission/image-policy-kubeconfig.yaml
-   - Use user "api-server" with the client certificate and key for authentication
+Complete the following:
 
-3. Create an admission configuration at:
-   /etc/kubernetes/admission/admission-config.yaml
-   - Configure ImagePolicyWebhook plugin
-   - Set defaultAllow to false (deny if webhook unavailable)
+1. Complete the kubeconfig file at:
+   /etc/kubernetes/admission/kubeconf.yaml
 
-4. Configure the kube-apiserver to:
-   - Enable the ImagePolicyWebhook admission plugin
-   - Use the admission configuration file
+   - The cluster name should be: image-checker
+   - Use the certificate-authority located at: /etc/kubernetes/admission/external-cert.pem
+   - Configure the user "api-server" with:
+     * client-certificate: /etc/kubernetes/admission/apiserver-client-cert.pem
+     * client-key: /etc/kubernetes/admission/apiserver-client-key.pem
+   - Set the current-context appropriately
 
-5. Test the webhook by deploying pods with images from different registries
+2. Complete the admission configuration at:
+   /etc/kubernetes/admission/admission_config.yaml
 
-Save your admission configuration to: /opt/course/16/admission-config.yaml
-Save the webhook kubeconfig to: /opt/course/16/image-policy-kubeconfig.yaml
-Save test results to: /opt/course/16/policy-test.txt
+   - Reference the kubeconfig file created above
+   - Configure settings for: allowTTL: 50, denyTTL: 50, retryBackoff: 500
+   - Ensure pods are DENIED if the webhook is not reachable (defaultAllow: false)
+
+3. Enable the ImagePolicyWebhook admission plugin in the kube-apiserver:
+   - Edit /etc/kubernetes/manifests/kube-apiserver.yaml
+   - Add ImagePolicyWebhook to the --enable-admission-plugins flag
+   - Configure --admission-control-config-file to point to the admission config
+   - Ensure the imagepolicy.k8s.io/v1alpha1 API is enabled (--runtime-config)
+   - Add necessary volume and volumeMount for the admission directory
+
+4. Verify the configuration works by attempting to create a test pod
+
+Save copies of your final configuration files to:
+  /opt/course/16/admission_config.yaml
+  /opt/course/16/kubeconf.yaml
+
+NOTE: The API server may not respond to kubectl commands while it restarts.
+Wait for it to become available again (usually 30-60 seconds).
