@@ -1,50 +1,8 @@
 <style>
-/* Prevent page breaks inside code blocks */
-pre, code {
-    page-break-inside: avoid !important;
-    break-inside: avoid !important;
-}
-pre code {
-    white-space: pre-wrap;
-}
-
-/* Keep headings with their following content */
-h1, h2, h3, h4, h5, h6 {
-    page-break-after: avoid !important;
-    break-after: avoid !important;
-    page-break-inside: avoid !important;
-    break-inside: avoid !important;
-}
-
-/* Keep paragraphs together */
-p {
-    page-break-inside: avoid !important;
-    break-inside: avoid !important;
-}
-
-/* Keep list items together */
-li {
-    page-break-inside: avoid !important;
-    break-inside: avoid !important;
-}
-
-/* Keep blockquotes together */
-blockquote {
-    page-break-inside: avoid !important;
-    break-inside: avoid !important;
-}
-
-/* Keep tables together */
-table {
-    page-break-inside: avoid !important;
-    break-inside: avoid !important;
-}
-
-/* Add space before headings to encourage page breaks before, not after */
-h1, h2, h3 {
-    page-break-before: auto;
-    margin-top: 1.5em;
-}
+pre, code { page-break-inside: avoid !important; break-inside: avoid !important; }
+h1, h2, h3, h4, h5, h6 { page-break-after: avoid !important; break-after: avoid !important; }
+p, li, blockquote, table { page-break-inside: avoid !important; break-inside: avoid !important; }
+h1, h2, h3 { page-break-before: auto; margin-top: 1.5em; }
 </style>
 
 # CKS Exam Quick Steps Reference
@@ -54,7 +12,7 @@ h1, h2, h3 {
 
 ---
 
-## � CKS Domain Weights
+## CKS Domain Weights
 
 | Domain | Weight | Key Topics |
 |--------|--------|------------|
@@ -67,7 +25,7 @@ h1, h2, h3 {
 
 ---
 
-## �🔧 First Things First - Set Aliases!
+## First Things First - Set Aliases!
 
 ```bash
 alias k=kubectl
@@ -79,22 +37,23 @@ complete -o default -F __start_kubectl k
 
 ---
 
-# 1️⃣ NetworkPolicy - Default Deny
+# 1. NetworkPolicy - Default Deny
 
-```
-┌─────────────────────────────────────────┐
-│ 1. Create namespace                     │
-│    kubectl create ns <ns>               │
-│                                         │
-│ 2. Create NetworkPolicy YAML:           │
-│    - podSelector: {}     <- ALL pods    │
-│    - policyTypes: [Ingress, Egress]     │
-│    - NO rules = DENY ALL                │
-│                                         │
-│ 3. kubectl apply -f <file>              │
-│ 4. kubectl get netpol -n <ns>           │
-└─────────────────────────────────────────┘
-```
+> **Step 1:** Create namespace
+> ```
+> kubectl create ns <ns>
+> ```
+
+> **Step 2:** Create NetworkPolicy YAML
+> - podSelector: {}  (ALL pods)
+> - policyTypes: [Ingress, Egress]
+> - NO rules = DENY ALL
+
+> **Step 3:** Apply and verify
+> ```
+> kubectl apply -f <file>
+> kubectl get netpol -n <ns>
+> ```
 
 **Key YAML:**
 ```yaml
@@ -106,20 +65,21 @@ spec:
 
 ---
 
-# 2️⃣ NetworkPolicy - Allow Specific
+# 2. NetworkPolicy - Allow Specific
 
-```
-┌─────────────────────────────────────────┐
-│ 1. Identify source/dest pods (labels)   │
-│ 2. Create policy with:                  │
-│    - podSelector: target pods           │
-│    - ingress.from: source pods          │
-│    - egress.to: dest pods               │
-│    - ALWAYS add DNS (port 53 UDP/TCP)   │
-│ 3. kubectl apply -f <file>              │
-│ 4. Test: kubectl exec <pod> -- wget     │
-└─────────────────────────────────────────┘
-```
+> **Step 1:** Identify source/dest pods (labels)
+
+> **Step 2:** Create policy with:
+> - podSelector: target pods
+> - ingress.from: source pods
+> - egress.to: dest pods
+> - ALWAYS add DNS (port 53 UDP/TCP)
+
+> **Step 3:** Apply and test
+> ```
+> kubectl apply -f <file>
+> kubectl exec <pod> -- wget ...
+> ```
 
 **DNS Egress (always add):**
 ```yaml
@@ -133,60 +93,71 @@ egress:
 
 ---
 
-# 3️⃣ CIS Benchmark / kube-bench
+# 3. CIS Benchmark / kube-bench
 
-```
-┌─────────────────────────────────────────┐
-│ 1. ssh controlplane                     │
-│ 2. kube-bench run --targets=master      │
-│ 3. Fix API server:                      │
-│    vim /etc/kubernetes/manifests/       │
-│        kube-apiserver.yaml              │
-│    - --anonymous-auth=false             │
-│    - --profiling=false                  │
-│    - --authorization-mode=Node,RBAC     │
-│                                         │
-│ 4. Fix kubelet (on nodes):              │
-│    vim /var/lib/kubelet/config.yaml     │
-│    authentication:                      │
-│      anonymous:                         │
-│        enabled: false                   │
-│    authorization:                       │
-│      mode: Webhook                      │
-│    readOnlyPort: 0                      │
-│                                         │
-│ 5. sudo systemctl restart kubelet       │
-│ 6. Re-run kube-bench to verify          │
-└─────────────────────────────────────────┘
-```
+> **Step 1:** SSH and run kube-bench
+> ```
+> ssh controlplane
+> kube-bench run --targets=master
+> ```
+
+> **Step 2:** Fix API server
+> ```
+> vim /etc/kubernetes/manifests/kube-apiserver.yaml
+> ```
+> - `--anonymous-auth=false`
+> - `--profiling=false`
+> - `--authorization-mode=Node,RBAC`
+
+> **Step 3:** Fix kubelet (on nodes)
+> ```
+> vim /var/lib/kubelet/config.yaml
+> ```
+> ```yaml
+> authentication:
+>   anonymous:
+>     enabled: false
+> authorization:
+>   mode: Webhook
+> readOnlyPort: 0
+> ```
+
+> **Step 4:** Restart and verify
+> ```
+> sudo systemctl restart kubelet
+> kube-bench run --targets=master
+> ```
 
 ---
 
-# 4️⃣ RBAC - Role & RoleBinding
+# 4. RBAC - Role & RoleBinding
 
-```
-┌─────────────────────────────────────────┐
-│ 1. Create ServiceAccount:               │
-│    kubectl create sa <sa> -n <ns>       │
-│                                         │
-│ 2. Create Role (namespace-scoped):      │
-│    kubectl create role <role>           │
-│      --verb=get,list,create             │
-│      --resource=pods,deployments        │
-│      -n <ns>                            │
-│                                         │
-│ 3. Create RoleBinding:                  │
-│    kubectl create rolebinding <rb>      │
-│      --role=<role>                      │
-│      --serviceaccount=<ns>:<sa>         │
-│      -n <ns>                            │
-│                                         │
-│ 4. Test:                                │
-│    kubectl auth can-i create pods       │
-│      --as=system:serviceaccount:        │
-│      <ns>:<sa> -n <ns>                  │
-└─────────────────────────────────────────┘
-```
+> **Step 1:** Create ServiceAccount
+> ```
+> kubectl create sa <sa> -n <ns>
+> ```
+
+> **Step 2:** Create Role (namespace-scoped)
+> ```
+> kubectl create role <role> \
+>   --verb=get,list,create \
+>   --resource=pods,deployments \
+>   -n <ns>
+> ```
+
+> **Step 3:** Create RoleBinding
+> ```
+> kubectl create rolebinding <rb> \
+>   --role=<role> \
+>   --serviceaccount=<ns>:<sa> \
+>   -n <ns>
+> ```
+
+> **Step 4:** Test
+> ```
+> kubectl auth can-i create pods \
+>   --as=system:serviceaccount:<ns>:<sa> -n <ns>
+> ```
 
 **API Groups:**
 | Group | Resources |
@@ -197,263 +168,269 @@ egress:
 
 ---
 
-# 5️⃣ RBAC - ClusterRole (cluster-wide)
+# 5. RBAC - ClusterRole (cluster-wide)
 
-```
-┌─────────────────────────────────────────┐
-│ 1. kubectl create clusterrole <cr>      │
-│      --verb=get,list,watch              │
-│      --resource=nodes,pods              │
-│                                         │
-│ 2. kubectl create clusterrolebinding    │
-│      <crb> --clusterrole=<cr>           │
-│      --serviceaccount=<ns>:<sa>         │
-│                                         │
-│ 3. Test:                                │
-│    kubectl auth can-i list nodes        │
-│      --as=system:serviceaccount:        │
-│      <ns>:<sa>                          │
-└─────────────────────────────────────────┘
-```
+> **Step 1:** Create ClusterRole
+> ```
+> kubectl create clusterrole <cr> \
+>   --verb=get,list,watch \
+>   --resource=nodes,pods
+> ```
 
----
+> **Step 2:** Create ClusterRoleBinding
+> ```
+> kubectl create clusterrolebinding <crb> \
+>   --clusterrole=<cr> \
+>   --serviceaccount=<ns>:<sa>
+> ```
 
-# 6️⃣ ServiceAccount Security
-
-```
-┌─────────────────────────────────────────┐
-│ 1. Create SA with no auto-mount:        │
-│    automountServiceAccountToken: false  │
-│                                         │
-│ 2. Update Pod/Deployment spec:          │
-│    - serviceAccountName: <sa>           │
-│    - automountServiceAccountToken:false │
-│                                         │
-│ 3. Create minimal Role (least priv)     │
-│    - NO secrets unless required         │
-│                                         │
-│ 4. Verify no token:                     │
-│    kubectl exec <pod> -- ls             │
-│    /var/run/secrets/kubernetes.io/      │
-│    -> Should fail (no token mounted)    │
-└─────────────────────────────────────────┘
-```
+> **Step 3:** Test
+> ```
+> kubectl auth can-i list nodes \
+>   --as=system:serviceaccount:<ns>:<sa>
+> ```
 
 ---
 
-# 7️⃣ AppArmor Profiles
+# 6. ServiceAccount Security
 
-```
-┌─────────────────────────────────────────┐
-│ 1. ssh <node>                           │
-│                                         │
-│ 2. Check profile loaded:                 │
-│    sudo aa-status | grep <profile>       │
-│                                         │
-│ 3. Load if needed:                      │
-│    sudo apparmor_parser -r              │
-│    /etc/apparmor.d/<profile>             │
-│                                         │
-│ 4. Add to Pod spec:                     │
-│    containers:                          │
-│    - securityContext:                   │
-│        appArmorProfile:                  │
-│          type: Localhost                │
-│          localhostProfile: <profile>      │
-│                                         │
-│ 5. kubectl apply & verify               │
-└─────────────────────────────────────────┘
-```
+> **Step 1:** Create SA with no auto-mount
+> ```yaml
+> automountServiceAccountToken: false
+> ```
+
+> **Step 2:** Update Pod/Deployment spec
+> - serviceAccountName: `<sa>`
+> - automountServiceAccountToken: `false`
+
+> **Step 3:** Create minimal Role (least priv)
+> - NO secrets unless required
+
+> **Step 4:** Verify no token
+> ```
+> kubectl exec <pod> -- ls /var/run/secrets/kubernetes.io/
+> # Should fail (no token mounted)
+> ```
+
+---
+
+# 7. AppArmor Profiles
+
+> **Step 1:** SSH to node
+> ```
+> ssh <node>
+> ```
+
+> **Step 2:** Check profile loaded
+> ```
+> sudo aa-status | grep <profile>
+> ```
+
+> **Step 3:** Load if needed
+> ```
+> sudo apparmor_parser -r /etc/apparmor.d/<profile>
+> ```
+
+> **Step 4:** Add to Pod spec
+> ```yaml
+> containers:
+> - securityContext:
+>     appArmorProfile:
+>       type: Localhost
+>       localhostProfile: <profile>
+> ```
+
+> **Step 5:** Apply and verify
+> ```
+> kubectl apply -f <file>
+> ```
 
 **Profile Types:** `RuntimeDefault` | `Localhost` | `Unconfined`
 
 ---
 
-# 8️⃣ Seccomp Profiles
+# 8. Seccomp Profiles
 
-```
-┌─────────────────────────────────────────┐
-│ 1. RuntimeDefault (easiest):            │
-│    spec:                                │
-│      securityContext:                   │
-│        seccompProfile:                   │
-│          type: RuntimeDefault           │
-│                                         │
-│ 2. Custom Localhost profile:             │
-│    - Profile at:                         │
-│      /var/lib/kubelet/seccomp/<file>     │
-│    - Pod spec:                          │
-│      seccompProfile:                     │
-│        type: Localhost                  │
-│        localhostProfile: <file>.json      │
-│                                         │
-│ 3. kubectl apply & verify running       │
-└─────────────────────────────────────────┘
-```
+> **Option 1: RuntimeDefault (easiest)**
+> ```yaml
+> spec:
+>   securityContext:
+>     seccompProfile:
+>       type: RuntimeDefault
+> ```
+
+> **Option 2: Custom Localhost profile**
+> - Profile at: `/var/lib/kubelet/seccomp/<file>`
+> ```yaml
+> seccompProfile:
+>   type: Localhost
+>   localhostProfile: <file>.json
+> ```
+
+> **Step 3:** Apply and verify running
+> ```
+> kubectl apply -f <file>
+> ```
 
 ---
 
-# 9️⃣ Pod Security Admission (PSA)
+# 9. Pod Security Admission (PSA)
 
-```
-┌─────────────────────────────────────────┐
-│ 1. Label namespace:                     │
-│    kubectl label ns <ns>                │
-│      pod-security.kubernetes.io/        │
-│        enforce=restricted               │
-│                                         │
-│ 2. Restricted Pod MUST have:            │
-│    [x] runAsNonRoot: true               │
-│    [x] seccompProfile: RuntimeDefault    │
-│    [x] allowPrivilegeEscalation: false  │
-│    [x] capabilities.drop: ["ALL"]       │
-│    [x] No hostPath, hostNetwork, hostPID│
-│    [x] No privileged containers         │
-│                                         │
-│ 3. Best practices (add for nginx etc):  │
-│    - readOnlyRootFilesystem: true       │
-│    - emptyDir for /tmp, /var/cache,     │
-│      /var/run (writable paths)          │
-│                                         │
-│ 4. Test: run non-compliant pod          │
-│    -> Should be rejected                │
-└─────────────────────────────────────────┘
-```
+> **Step 1:** Label namespace
+> ```
+> kubectl label ns <ns> \
+>   pod-security.kubernetes.io/enforce=restricted
+> ```
+
+> **Step 2:** Restricted Pod MUST have:
+> - [x] `runAsNonRoot: true`
+> - [x] `seccompProfile: RuntimeDefault`
+> - [x] `allowPrivilegeEscalation: false`
+> - [x] `capabilities.drop: ["ALL"]`
+> - [x] No hostPath, hostNetwork, hostPID
+> - [x] No privileged containers
+
+> **Step 3:** Best practices (add for nginx etc)
+> - `readOnlyRootFilesystem: true`
+> - emptyDir for `/tmp`, `/var/cache`, `/var/run`
+
+> **Step 4:** Test - run non-compliant pod
+> - Should be rejected
 
 **Levels:** `privileged` | `baseline` | `restricted`
 **Modes:** `enforce` | `warn` | `audit`
 
 ---
 
-# 🔟 Secrets Encryption at Rest
+# 10. Secrets Encryption at Rest
 
-```
-┌─────────────────────────────────────────┐
-│ 1. Generate key:                        │
-│    head -c 32 /dev/urandom | base64     │
-│                                         │
-│ 2. Create /etc/kubernetes/              │
-│    encryption-config.yaml:               │
-│    !! aescbc FIRST, identity LAST !!    │
-│                                         │
-│ 3. Edit kube-apiserver.yaml:            │
-│    --encryption-provider-config=         │
-│      /etc/kubernetes/                   │
-│      encryption-config.yaml              │
-│    + volumeMounts + volumes             │
-│                                         │
-│ 4. Wait for API restart:                │
-│    watch "crictl ps | grep apiserver"   │
-│                                         │
-│ 5. Re-encrypt existing secrets:         │
-│    kubectl get secrets -A -o json |     │
-│      kubectl replace -f -               │
-│                                         │
-│ 6. Verify in etcd (encrypted):          │
-│    etcdctl get /registry/secrets/...    │
-│    -> Should start with k8s:enc:aescbc  │
-└─────────────────────────────────────────┘
-```
+> **Step 1:** Generate key
+> ```
+> head -c 32 /dev/urandom | base64
+> ```
 
----
+> **Step 2:** Create encryption config
+> - Path: `/etc/kubernetes/encryption-config.yaml`
+> - **!! aescbc FIRST, identity LAST !!**
 
-# 1️⃣1️⃣ SecurityContext Hardening
+> **Step 3:** Edit kube-apiserver.yaml
+> - `--encryption-provider-config=/etc/kubernetes/encryption-config.yaml`
+> - Add volumeMounts + volumes
 
-```
-┌─────────────────────────────────────────┐
-│ Add to Pod/Container spec:              │
-│                                         │
-│ spec:                                   │
-│   securityContext:           # Pod-level│
-│     runAsNonRoot: true                  │
-│     runAsUser: 1000                     │
-│     fsGroup: 1000                       │
-│     seccompProfile:                      │
-│       type: RuntimeDefault              │
-│   containers:                           │
-│   - securityContext:         # Container│
-│       allowPrivilegeEscalation: false   │
-│       readOnlyRootFilesystem: true      │
-│       capabilities:                     │
-│         drop: ["ALL"]                   │
-│                                         │
-│ Add emptyDir for writable paths         │
-└─────────────────────────────────────────┘
-```
+> **Step 4:** Wait for API restart
+> ```
+> watch "crictl ps | grep apiserver"
+> ```
+
+> **Step 5:** Re-encrypt existing secrets
+> ```
+> kubectl get secrets -A -o json | kubectl replace -f -
+> ```
+
+> **Step 6:** Verify in etcd (encrypted)
+> ```
+> etcdctl get /registry/secrets/...
+> # Should start with k8s:enc:aescbc
+> ```
 
 ---
 
-# 1️⃣2️⃣ Trivy Image Scanning
+# 11. SecurityContext Hardening
 
-```
-┌─────────────────────────────────────────┐
-│ 1. Scan for HIGH/CRITICAL:              │
-│    trivy image --severity HIGH,CRITICAL │
-│      <image>:<tag>                      │
-│                                         │
-│ 2. Compare images:                      │
-│    trivy image nginx:1.19 > old.txt     │
-│    trivy image nginx:alpine > new.txt   │
-│                                         │
-│ 3. Choose image with fewer vulns        │
-│                                         │
-│ 4. Update deployment:                   │
-│    kubectl set image deploy/<name>      │
-│      <container>=<safer-image>          │
-└─────────────────────────────────────────┘
-```
+> **Add to Pod/Container spec:**
+> ```yaml
+> spec:
+>   securityContext:           # Pod-level
+>     runAsNonRoot: true
+>     runAsUser: 1000
+>     fsGroup: 1000
+>     seccompProfile:
+>       type: RuntimeDefault
+>   containers:
+>   - securityContext:         # Container
+>       allowPrivilegeEscalation: false
+>       readOnlyRootFilesystem: true
+>       capabilities:
+>         drop: ["ALL"]
+> ```
+
+> **Add emptyDir for writable paths**
+
+---
+
+# 12. Trivy Image Scanning
+
+> **Step 1:** Scan for HIGH/CRITICAL
+> ```
+> trivy image --severity HIGH,CRITICAL <image>:<tag>
+> ```
+
+> **Step 2:** Compare images
+> ```
+> trivy image nginx:1.19 > old.txt
+> trivy image nginx:alpine > new.txt
+> ```
+
+> **Step 3:** Choose image with fewer vulns
+
+> **Step 4:** Update deployment
+> ```
+> kubectl set image deploy/<name> <container>=<safer-image>
+> ```
 
 **Quick flags:** `--severity` | `-q` (quiet) | `--ignore-unfixed`
 
 ---
 
-# 1️⃣3️⃣ Kubesec Analysis
+# 13. Kubesec Analysis
 
-```
-┌─────────────────────────────────────────┐
-│ 1. Scan manifest:                       │
-│    kubesec scan <file>.yaml              │
-│                                         │
-│ 2. Check score (target: 8+)             │
-│                                         │
-│ 3. Add security features:               │
-│    +1 runAsNonRoot: true                │
-│    +1 readOnlyRootFilesystem: true      │
-│    +1 capabilities.drop: ALL            │
-│    +1 resources.limits                  │
-│    +1 automountServiceAccountToken:false│
-│                                         │
-│ 4. Rescan and verify score >= 8         │
-└─────────────────────────────────────────┘
-```
+> **Step 1:** Scan manifest
+> ```
+> kubesec scan <file>.yaml
+> ```
+
+> **Step 2:** Check score (target: 8+)
+
+> **Step 3:** Add security features
+> - +1 `runAsNonRoot: true`
+> - +1 `readOnlyRootFilesystem: true`
+> - +1 `capabilities.drop: ALL`
+> - +1 `resources.limits`
+> - +1 `automountServiceAccountToken: false`
+
+> **Step 4:** Rescan and verify score >= 8
 
 ---
 
-# 1️⃣4️⃣ Falco Runtime Security
+# 14. Falco Runtime Security
 
-```
-┌─────────────────────────────────────────┐
-│ 1. ssh <node> (where Falco runs)        │
-│                                         │
-│ 2. Create rule file:                     │
-│    /etc/falco/rules.d/<name>.yaml       │
-│                                         │
-│ 3. Rule structure:                      │
-│    - rule: <name>                       │
-│      desc: <description>                │
-│      condition: <expression>            │
-│      output: <message with %fields>      │
-│      priority: WARNING|ALERT|etc        │
-│                                         │
-│ 4. Restart Falco:                       │
-│    sudo systemctl restart               │
-│      falco-modern-bpf                   │
-│                                         │
-│ 5. Trigger & check logs:                │
-│    kubectl exec <pod> -- /bin/sh        │
-│    journalctl -u falco-modern-bpf -f    │
-└─────────────────────────────────────────┘
-```
+> **Step 1:** SSH to node where Falco runs
+> ```
+> ssh <node>
+> ```
+
+> **Step 2:** Create rule file
+> - Path: `/etc/falco/rules.d/<name>.yaml`
+
+> **Step 3:** Rule structure
+> ```yaml
+> - rule: <name>
+>   desc: <description>
+>   condition: <expression>
+>   output: <message with %fields>
+>   priority: WARNING|ALERT|etc
+> ```
+
+> **Step 4:** Restart Falco
+> ```
+> sudo systemctl restart falco-modern-bpf
+> ```
+
+> **Step 5:** Trigger & check logs
+> ```
+> kubectl exec <pod> -- /bin/sh
+> journalctl -u falco-modern-bpf -f
+> ```
 
 **Common macros:**
 ```yaml
@@ -467,187 +444,190 @@ egress:
 
 ---
 
-# 1️⃣5️⃣ Audit Logs
+# 15. Audit Logs
 
-```
-┌─────────────────────────────────────────┐
-│ 1. Create audit policy:                 │
-│    /etc/kubernetes/audit-policy.yaml    │
-│    - level: None|Metadata|Request|      │
-│      RequestResponse                    │
-│    - resources: [secrets, pods, etc]    │
-│    - verbs: [create, delete, etc]       │
-│                                         │
-│ 2. Edit kube-apiserver.yaml:            │
-│    --audit-policy-file=<path>            │
-│    --audit-log-path=<log-path>          │
-│    --audit-log-maxage=30                │
-│    + volumeMounts + volumes             │
-│                                         │
-│ 3. mkdir -p /var/log/kubernetes/audit   │
-│                                         │
-│ 4. Wait for API restart                 │
-│                                         │
-│ 5. Test & find entry:                    │
-│    kubectl create secret ...            │
-│    grep <secret> <audit-log>            │
-└─────────────────────────────────────────┘
-```
+> **Step 1:** Create audit policy
+> - Path: `/etc/kubernetes/audit-policy.yaml`
+> - level: `None` | `Metadata` | `Request` | `RequestResponse`
+> - resources: [secrets, pods, etc]
+> - verbs: [create, delete, etc]
 
-**Audit Levels:** `None` → `Metadata` → `Request` → `RequestResponse`
+> **Step 2:** Edit kube-apiserver.yaml
+> - `--audit-policy-file=<path>`
+> - `--audit-log-path=<log-path>`
+> - `--audit-log-maxage=30`
+> - Add volumeMounts + volumes
 
----
+> **Step 3:** Create log directory
+> ```
+> mkdir -p /var/log/kubernetes/audit
+> ```
 
-# 1️⃣6️⃣ RuntimeClass / gVisor
+> **Step 4:** Wait for API restart
 
-```
-┌─────────────────────────────────────────┐
-│ 1. Verify RuntimeClass exists:          │
-│    kubectl get runtimeclass gvisor      │
-│                                         │
-│ 2. Add to Pod spec:                     │
-│    spec:                                │
-│      runtimeClassName: gvisor           │
-│                                         │
-│ 3. kubectl apply & verify running       │
-│                                         │
-│ 4. Verify gVisor:                       │
-│    kubectl exec <pod> -- dmesg | head   │
-│    -> Should show gVisor kernel         │
-└─────────────────────────────────────────┘
-```
+> **Step 5:** Test & find entry
+> ```
+> kubectl create secret ...
+> grep <secret> <audit-log>
+> ```
+
+**Audit Levels:** `None` -> `Metadata` -> `Request` -> `RequestResponse`
 
 ---
 
-# 1️⃣7️⃣ ImagePolicyWebhook
+# 16. RuntimeClass / gVisor
 
-```
-┌─────────────────────────────────────────┐
-│ 1. Create webhook kubeconfig:            │
-│    /etc/kubernetes/admission/           │
-│      image-policy-kubeconfig.yaml        │
-│                                         │
-│ 2. Create admission config:              │
-│    /etc/kubernetes/admission/           │
-│      admission-config.yaml               │
-│    - defaultAllow: false (DENY if down) │
-│                                         │
-│ 3. Edit kube-apiserver.yaml:            │
-│    --enable-admission-plugins=          │
-│      NodeRestriction,ImagePolicyWebhook │
-│    --admission-control-config-file=       │
-│      <admission-config-path>             │
-│    + volumeMounts + volumes             │
-│                                         │
-│ 4. Wait & test allowed/denied images    │
-└─────────────────────────────────────────┘
-```
+> **Step 1:** Verify RuntimeClass exists
+> ```
+> kubectl get runtimeclass gvisor
+> ```
 
----
+> **Step 2:** Add to Pod spec
+> ```yaml
+> spec:
+>   runtimeClassName: gvisor
+> ```
 
-# 1️⃣8️⃣ Binary Verification
+> **Step 3:** Apply and verify running
+> ```
+> kubectl apply -f <file>
+> ```
 
-```
-┌─────────────────────────────────────────┐
-│ 1. Get cluster version:                 │
-│    kubectl version                      │
-│                                         │
-│ 2. Download official checksum:           │
-│    curl -LO https://dl.k8s.io/release/  │
-│      <version>/bin/linux/amd64/         │
-│      kubectl.sha512                     │
-│                                         │
-│ 3. Calculate local checksum:            │
-│    sha512sum $(which kubectl)           │
-│                                         │
-│ 4. Compare:                             │
-│    MATCH -> GENUINE                     │
-│    NO MATCH -> TAMPERED                 │
-│                                         │
-│ 5. Save conclusion to file               │
-└─────────────────────────────────────────┘
-```
+> **Step 4:** Verify gVisor
+> ```
+> kubectl exec <pod> -- dmesg | head
+> # Should show gVisor kernel
+> ```
 
 ---
 
-# 1️⃣9️⃣ Node Metadata Protection
+# 17. ImagePolicyWebhook
 
-```
-┌─────────────────────────────────────────┐
-│ 1. Create NetworkPolicy to block        │
-│    169.254.169.254/32                   │
-│                                         │
-│ 2. Policy structure:                    │
-│    spec:                                │
-│      podSelector: {}                    │
-│      policyTypes: [Egress]              │
-│      egress:                            │
-│      - to:                              │
-│        - ipBlock:                       │
-│            cidr: 0.0.0.0/0              │
-│            except:                      │
-│            - 169.254.169.254/32         │
-│      - ports: [UDP/TCP 53]  # DNS       │
-│                                         │
-│ 3. Test metadata access -> should fail  │
-│    wget http://169.254.169.254/...      │
-└─────────────────────────────────────────┘
-```
+> **Step 1:** Create webhook kubeconfig
+> - Path: `/etc/kubernetes/admission/image-policy-kubeconfig.yaml`
+
+> **Step 2:** Create admission config
+> - Path: `/etc/kubernetes/admission/admission-config.yaml`
+> - `defaultAllow: false` (DENY if webhook down)
+
+> **Step 3:** Edit kube-apiserver.yaml
+> - `--enable-admission-plugins=NodeRestriction,ImagePolicyWebhook`
+> - `--admission-control-config-file=<admission-config-path>`
+> - Add volumeMounts + volumes
+
+> **Step 4:** Wait & test allowed/denied images
 
 ---
 
-# 2️⃣0️⃣ Ingress TLS
+# 18. Binary Verification
 
-```
-┌─────────────────────────────────────────┐
-│ 1. Generate cert:                       │
-│    openssl req -x509 -nodes -days 365   │
-│      -newkey rsa:2048                   │
-│      -keyout tls.key -out tls.crt       │
-│      -subj "/CN=<domain>"               │
-│                                         │
-│ 2. Create TLS secret:                   │
-│    kubectl create secret tls <name>     │
-│      --cert=tls.crt --key=tls.key       │
-│      -n <ns>                            │
-│                                         │
-│ 3. Create Ingress with TLS:             │
-│    spec:                                │
-│      tls:                               │
-│      - hosts: [<domain>]                │
-│        secretName: <tls-secret>         │
-│      rules: ...                         │
-│                                         │
-│ 4. kubectl apply & verify               │
-└─────────────────────────────────────────┘
-```
+> **Step 1:** Get cluster version
+> ```
+> kubectl version
+> ```
+
+> **Step 2:** Download official checksum
+> ```
+> curl -LO https://dl.k8s.io/release/<version>/bin/linux/amd64/kubectl.sha512
+> ```
+
+> **Step 3:** Calculate local checksum
+> ```
+> sha512sum $(which kubectl)
+> ```
+
+> **Step 4:** Compare
+> - MATCH -> GENUINE
+> - NO MATCH -> TAMPERED
+
+> **Step 5:** Save conclusion to file
 
 ---
 
-# 2️⃣1️⃣ OPA Gatekeeper (Policy Enforcement)
+# 19. Node Metadata Protection
 
-```
-┌─────────────────────────────────────────┐
-│ 1. Verify Gatekeeper installed:         │
-│    kubectl get pods -n gatekeeper-system│
-│                                         │
-│ 2. Create ConstraintTemplate (policy):  │
-│    apiVersion: templates.gatekeeper.sh  │
-│    kind: ConstraintTemplate             │
-│    spec.targets[].rego: <policy-logic>  │
-│                                         │
-│ 3. Create Constraint (apply policy):    │
-│    apiVersion: constraints.gatekeeper.sh│
-│    kind: <TemplateName>                 │
-│    spec.match.kinds: [Pod, Deployment]  │
-│    spec.parameters: <values>            │
-│                                         │
-│ 4. Apply Template FIRST, then Constraint│
-│                                         │
-│ 5. Test: create violating resource      │
-│    -> Should be rejected                │
-└─────────────────────────────────────────┘
-```
+> **Step 1:** Create NetworkPolicy to block `169.254.169.254/32`
+
+> **Step 2:** Policy structure
+> ```yaml
+> spec:
+>   podSelector: {}
+>   policyTypes: [Egress]
+>   egress:
+>   - to:
+>     - ipBlock:
+>         cidr: 0.0.0.0/0
+>         except:
+>         - 169.254.169.254/32
+>   - ports: [UDP/TCP 53]  # DNS
+> ```
+
+> **Step 3:** Test metadata access - should fail
+> ```
+> wget http://169.254.169.254/...
+> ```
+
+---
+
+# 20. Ingress TLS
+
+> **Step 1:** Generate cert
+> ```
+> openssl req -x509 -nodes -days 365 \
+>   -newkey rsa:2048 \
+>   -keyout tls.key -out tls.crt \
+>   -subj "/CN=<domain>"
+> ```
+
+> **Step 2:** Create TLS secret
+> ```
+> kubectl create secret tls <name> \
+>   --cert=tls.crt --key=tls.key \
+>   -n <ns>
+> ```
+
+> **Step 3:** Create Ingress with TLS
+> ```yaml
+> spec:
+>   tls:
+>   - hosts: [<domain>]
+>     secretName: <tls-secret>
+>   rules: ...
+> ```
+
+> **Step 4:** Apply and verify
+> ```
+> kubectl apply -f <file>
+> ```
+
+---
+
+# 21. OPA Gatekeeper (Policy Enforcement)
+
+> **Step 1:** Verify Gatekeeper installed
+> ```
+> kubectl get pods -n gatekeeper-system
+> ```
+
+> **Step 2:** Create ConstraintTemplate (policy)
+> ```yaml
+> apiVersion: templates.gatekeeper.sh
+> kind: ConstraintTemplate
+> spec.targets[].rego: <policy-logic>
+> ```
+
+> **Step 3:** Create Constraint (apply policy)
+> ```yaml
+> apiVersion: constraints.gatekeeper.sh
+> kind: <TemplateName>
+> spec.match.kinds: [Pod, Deployment]
+> spec.parameters: <values>
+> ```
+
+> **Step 4:** Apply Template FIRST, then Constraint
+
+> **Step 5:** Test - create violating resource
+> - Should be rejected
 
 **Common Use Cases:**
 - Restrict allowed image registries
@@ -656,126 +636,144 @@ egress:
 
 ---
 
-# 2️⃣2️⃣ SBOM (Software Bill of Materials)
+# 22. SBOM (Software Bill of Materials)
 
-```
-┌─────────────────────────────────────────┐
-│ 1. Generate SBOM with Trivy:            │
-│    trivy image --format cyclonedx       │
-│      -o sbom.json <image>               │
-│                                         │
-│ 2. Or generate SPDX format:             │
-│    trivy image --format spdx-json       │
-│      -o sbom.spdx.json <image>          │
-│                                         │
-│ 3. Generate with bom tool:              │
-│    bom generate --image <image>         │
-│      --format spdx -o sbom.spdx         │
-│                                         │
-│ 4. Scan existing SBOM for vulns:        │
-│    trivy sbom sbom.json                 │
-└─────────────────────────────────────────┘
-```
+> **Step 1:** Generate SBOM with Trivy
+> ```
+> trivy image --format cyclonedx -o sbom.json <image>
+> ```
+
+> **Step 2:** Or generate SPDX format
+> ```
+> trivy image --format spdx-json -o sbom.spdx.json <image>
+> ```
+
+> **Step 3:** Generate with bom tool
+> ```
+> bom generate --image <image> --format spdx -o sbom.spdx
+> ```
+
+> **Step 4:** Scan existing SBOM for vulns
+> ```
+> trivy sbom sbom.json
+> ```
 
 **Formats:** `CycloneDX` (OWASP) | `SPDX` (ISO standard)
 
 ---
 
-# 2️⃣3️⃣ KubeLinter (Static Analysis)
+# 23. KubeLinter (Static Analysis)
 
-```
-┌─────────────────────────────────────────┐
-│ 1. Scan manifest:                       │
-│    kube-linter lint <file>.yaml         │
-│                                         │
-│ 2. Scan directory:                      │
-│    kube-linter lint ./manifests/        │
-│                                         │
-│ 3. Scan Helm chart:                     │
-│    kube-linter lint ./my-chart/         │
-│                                         │
-│ 4. List available checks:               │
-│    kube-linter checks list              │
-│                                         │
-│ 5. Run specific checks only:            │
-│    kube-linter lint --include           │
-│      "run-as-non-root,no-read-only-     │
-│      root-fs" <file>.yaml               │
-│                                         │
-│ 6. Fix issues and rescan                │
-└─────────────────────────────────────────┘
-```
+> **Step 1:** Scan manifest
+> ```
+> kube-linter lint <file>.yaml
+> ```
+
+> **Step 2:** Scan directory
+> ```
+> kube-linter lint ./manifests/
+> ```
+
+> **Step 3:** Scan Helm chart
+> ```
+> kube-linter lint ./my-chart/
+> ```
+
+> **Step 4:** List available checks
+> ```
+> kube-linter checks list
+> ```
+
+> **Step 5:** Run specific checks only
+> ```
+> kube-linter lint --include "run-as-non-root,no-read-only-root-fs" <file>.yaml
+> ```
+
+> **Step 6:** Fix issues and rescan
 
 **Note:** Non-zero exit code on findings (CI/CD friendly)
 
 ---
 
-# 2️⃣4️⃣ Kubernetes Version Upgrade
+# 24. Kubernetes Version Upgrade
 
-```
-┌─────────────────────────────────────────┐
-│ 1. Drain control plane node:            │
-│    kubectl drain <node>                 │
-│      --ignore-daemonsets                │
-│                                         │
-│ 2. Upgrade kubeadm FIRST:               │
-│    apt-get update                       │
-│    apt-get install -y kubeadm=1.XX.0-*  │
-│                                         │
-│ 3. Plan and apply upgrade:              │
-│    kubeadm upgrade plan                 │
-│    kubeadm upgrade apply v1.XX.0        │
-│                                         │
-│ 4. Upgrade kubelet & kubectl:           │
-│    apt-get install -y                   │
-│      kubelet=1.XX.0-* kubectl=1.XX.0-*  │
-│                                         │
-│ 5. Restart kubelet:                     │
-│    systemctl daemon-reload              │
-│    systemctl restart kubelet            │
-│                                         │
-│ 6. Uncordon node:                       │
-│    kubectl uncordon <node>              │
-└─────────────────────────────────────────┘
-```
+> **Step 1:** Drain control plane node
+> ```
+> kubectl drain <node> --ignore-daemonsets
+> ```
+
+> **Step 2:** Upgrade kubeadm FIRST
+> ```
+> apt-get update
+> apt-get install -y kubeadm=1.XX.0-*
+> ```
+
+> **Step 3:** Plan and apply upgrade
+> ```
+> kubeadm upgrade plan
+> kubeadm upgrade apply v1.XX.0
+> ```
+
+> **Step 4:** Upgrade kubelet & kubectl
+> ```
+> apt-get install -y kubelet=1.XX.0-* kubectl=1.XX.0-*
+> ```
+
+> **Step 5:** Restart kubelet
+> ```
+> systemctl daemon-reload
+> systemctl restart kubelet
+> ```
+
+> **Step 6:** Uncordon node
+> ```
+> kubectl uncordon <node>
+> ```
 
 **Rule:** NEVER skip minor versions (1.32->1.33->1.34)
 
 ---
 
-# 2️⃣5️⃣ mTLS / Pod-to-Pod Encryption
+# 25. mTLS / Pod-to-Pod Encryption
 
-```
-┌─────────────────────────────────────────┐
-│ ISTIO mTLS:                             │
-│ 1. Label ns for sidecar injection:      │
-│    kubectl label ns <ns>                │
-│      istio-injection=enabled            │
-│                                         │
-│ 2. Create PeerAuthentication:           │
-│    apiVersion: security.istio.io/v1beta1│
-│    kind: PeerAuthentication             │
-│    spec.mtls.mode: STRICT               │
-│                                         │
-│ 3. Verify:                              │
-│    istioctl x describe pod <pod>        │
-├─────────────────────────────────────────┤
-│ CILIUM WireGuard:                       │
-│ 1. Enable during install:               │
-│    helm install cilium --set            │
-│      encryption.enabled=true            │
-│      encryption.type=wireguard          │
-│                                         │
-│ 2. Verify:                              │
-│    cilium encrypt status                │
-└─────────────────────────────────────────┘
-```
+## ISTIO mTLS
+
+> **Step 1:** Label ns for sidecar injection
+> ```
+> kubectl label ns <ns> istio-injection=enabled
+> ```
+
+> **Step 2:** Create PeerAuthentication
+> ```yaml
+> apiVersion: security.istio.io/v1beta1
+> kind: PeerAuthentication
+> spec.mtls.mode: STRICT
+> ```
+
+> **Step 3:** Verify
+> ```
+> istioctl x describe pod <pod>
+> ```
+
+## CILIUM WireGuard
+
+> **Step 1:** Enable during install
+> ```
+> helm install cilium --set \
+>   encryption.enabled=true \
+>   encryption.type=wireguard
+> ```
+
+> **Step 2:** Verify
+> ```
+> cilium encrypt status
+> ```
 
 **Modes:** `STRICT` (mTLS only) | `PERMISSIVE` (both)
 
 ---
 
-# 📁 Critical File Paths
+# Critical File Paths
 
 | Path | Purpose |
 |------|---------|
@@ -790,7 +788,7 @@ egress:
 
 ---
 
-# ⚡ Quick Commands Cheat Sheet
+# Quick Commands Cheat Sheet
 
 ```bash
 # RBAC testing
@@ -824,7 +822,7 @@ crictl inspect <container-id>
 
 ---
 
-# ❌ Common Mistakes to AVOID
+# Common Mistakes to AVOID
 
 | Mistake | Fix |
 |---------|-----|
@@ -839,18 +837,18 @@ crictl inspect <container-id>
 
 ---
 
-# 🎯 Exam Day Flow
+# Exam Day Flow
 
 ```
 1. Set aliases FIRST
 2. Read question FULLY (note ns, paths, names)
 3. Use imperative commands when possible
 4. VERIFY after each step
-5. Flag hard questions → skip → return later
+5. Flag hard questions -> skip -> return later
 6. Check output paths match exactly
 7. Watch for restart requirements
 ```
 
 ---
 
-**Good luck on your CKS exam! 🚀**
+**Good luck on your CKS exam!**
