@@ -678,6 +678,87 @@ Gatekeeper uses OPA (Open Policy Agent) to enforce custom policies via admission
 
 ---
 
+# 21a. Gatekeeper - Restrict Image Registries
+
+Only allow images from approved registries. Most common Gatekeeper exam question. ConstraintTemplate checks image prefix using Rego's `startswith()`. Include trailing slash in registry prefixes.
+
+> **Step 1:** Create ConstraintTemplate
+> ```yaml
+> apiVersion: templates.gatekeeper.sh/v1
+> kind: ConstraintTemplate
+> metadata:
+>   name: k8sallowedrepos
+> spec:
+>   crd:
+>     spec:
+>       names:
+>         kind: K8sAllowedRepos
+>       validation:
+>         openAPIV3Schema:
+>           type: object
+>           properties:
+>             repos:
+>               type: array
+>               items:
+>                 type: string
+>   targets:
+>   - target: admission.k8s.gatekeeper.sh
+>     rego: |
+>       package k8sallowedrepos
+>       violation[{"msg": msg}] {
+>         container := input.review.object.spec.containers[_]
+>         satisfied := [good | repo = input.parameters.repos[_]; good = startswith(container.image, repo)]
+>         not any(satisfied)
+>         msg := sprintf("Container '%v' uses image '%v' not from allowed repos", [container.name, container.image])
+>       }
+> ```
+
+> **Step 2:** Apply ConstraintTemplate
+> ```
+> kubectl apply -f constraint-template.yaml
+> ```
+
+> **Step 3:** Create Constraint with allowed registries
+> ```yaml
+> apiVersion: constraints.gatekeeper.sh/v1beta1
+> kind: K8sAllowedRepos
+> metadata:
+>   name: allowed-repos
+> spec:
+>   match:
+>     kinds:
+>     - apiGroups: [""]
+>       kinds: ["Pod"]
+>   parameters:
+>     repos:
+>     - "docker.io/library/"
+>     - "gcr.io/google-containers/"
+>     - "registry.k8s.io/"
+> ```
+
+> **Step 4:** Apply Constraint
+> ```
+> kubectl apply -f constraint.yaml
+> ```
+
+> **Step 5:** Test - allowed image should work
+> ```
+> kubectl run test --image=docker.io/library/nginx:alpine
+> ```
+
+> **Step 6:** Test - disallowed image should be rejected
+> ```
+> kubectl run test --image=quay.io/unauthorized/app:v1
+> # Error: admission webhook denied the request
+> ```
+
+**Traps:**
+- Include trailing slash: `docker.io/library/` not `docker.io/library`
+- `nginx:alpine` resolves to `docker.io/library/nginx:alpine`
+- Check initContainers too in production Rego
+
+---
+
 # 22. SBOM (Software Bill of Materials)
 
 SBOM lists all components/dependencies in a container image. Enables vulnerability tracking and license compliance. Generate with Trivy in CycloneDX or SPDX format.

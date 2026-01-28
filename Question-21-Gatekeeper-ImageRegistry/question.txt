@@ -1,0 +1,32 @@
+Weight: 6%
+Domain: Supply Chain Security (20%)
+
+Context:
+Your organization requires that all container images come from approved registries only.
+OPA Gatekeeper is already installed in the cluster. You need to create a policy that
+restricts images to specific trusted registries.
+
+Task:
+1. Verify that Gatekeeper is installed and running in the cluster
+
+2. Create a ConstraintTemplate named 'k8sallowedrepos' that:
+   - Checks container images against a list of allowed repository prefixes
+   - Rejects pods with images from non-approved registries
+   - Provides a clear error message showing the container name and disallowed image
+
+3. Create a Constraint named 'allowed-repos' using the template that:
+   - Applies to Pods
+   - Allows images only from these registries:
+     * docker.io/library/
+     * gcr.io/google-containers/
+     * registry.k8s.io/
+
+4. Test the policy in the 'gatekeeper-test' namespace by:
+   - Creating a pod with an allowed image (should succeed)
+   - Creating a pod with a disallowed image (should be rejected)
+
+Namespace for testing: gatekeeper-test (already created by setup)
+
+Save your ConstraintTemplate to: /opt/course/21/constraint-template.yaml
+Save your Constraint to: /opt/course/21/constraint.yaml
+Save the rejection error message to: /opt/course/21/rejected-error.txt
